@@ -58,8 +58,8 @@ function ComparisonPanel() {
   const capTotal = chillers.reduce((sum, c) => sum + c.capacityTotal, 0);
 
   return (
-    <div className="grid gap-4 xl:grid-cols-4">
-      <section className="glass-card p-4 xl:col-span-2">
+    <div className="grid gap-3 xl:grid-cols-4">
+      <section className="glass-card p-3.5 xl:col-span-2">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h3 className="font-display text-sm font-semibold">Comparativo dos Chillers</h3>
@@ -67,11 +67,11 @@ function ComparisonPanel() {
           </div>
           <Gauge className="h-4 w-4 text-primary" />
         </div>
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-2.5 md:grid-cols-3">
           {chillers.map((c) => {
             const theme = chillerTheme[c.id];
             return (
-              <div key={c.id} className="rounded-xl border border-border/35 bg-background/30 p-3">
+              <div key={c.id} className="rounded-xl border border-border/35 bg-background/30 p-2.5">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <div className="font-display text-sm font-bold" style={{ color: theme.hex }}>{c.name}</div>
                   <SeverityBadge severity={c.risk} className="scale-90" />
@@ -88,7 +88,7 @@ function ComparisonPanel() {
         </div>
       </section>
 
-      <section className="glass-card p-4">
+      <section className="glass-card p-3.5">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h3 className="font-display text-sm font-semibold">Distribuição da Carga</h3>
@@ -103,7 +103,7 @@ function ComparisonPanel() {
         </div>
       </section>
 
-      <section className="glass-card p-4">
+      <section className="glass-card p-3.5">
         <div className="mb-3 flex items-center justify-between">
           <div>
             <h3 className="font-display text-sm font-semibold">Análise Cruzada</h3>
@@ -136,7 +136,7 @@ function OperationalIndicators() {
   const meanBypass = avg(chillers.map((c) => c.hydraulic.bypassValve));
 
   return (
-    <section className="glass-card p-4">
+    <section className="glass-card p-3.5">
       <div className="mb-3 flex items-center gap-2">
         <Thermometer className="h-4 w-4 text-primary" />
         <h3 className="font-display text-sm font-semibold">Indicadores Operacionais do Período</h3>
@@ -171,7 +171,7 @@ function Index() {
   const pumpsWithAttention = chillers.flatMap((c) => c.pumps).filter((p) => p.alarm || p.mode === "local" || p.status === "fault" || p.pressureError < -0.3).length;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
@@ -185,7 +185,7 @@ function Index() {
         <SeverityBadge severity={s.risk} className="text-xs" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
+      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-8">
         <KpiCard label="Saúde Geral" value={s.healthScore} unit="/100" icon={Heart} tone="warn" trend="↑ 2 vs ontem" />
         <KpiCard label="Chiller Crítico" value={criticalChiller.name.replace("Chiller ", "")} icon={ShieldAlert} tone="alert" trend={`${criticalChiller.healthScore}/100 saúde`} />
         <KpiCard label="Anomalias" value={s.anomalies} icon={AlertCircle} tone="alert" trend="IA detectou" />
@@ -196,24 +196,24 @@ function Index() {
         <KpiCard label="Comunicação" value="Online" icon={Wifi} tone="ok" trend="n8n / SCADA" />
       </div>
 
-      <div className="grid gap-4 2xl:grid-cols-[1fr_350px]">
-        <section className="glass-card p-4">
-          <div className="mb-4 flex items-center justify-between">
+      <div className="grid gap-3 2xl:grid-cols-[1fr_330px]">
+        <section className="glass-card p-3.5">
+          <div className="mb-3 flex items-center justify-between">
             <div>
               <h2 className="font-display text-xl font-semibold">Chillers da Central</h2>
               <p className="text-xs text-muted-foreground">Mini-cockpits com saúde, capacidade, temperaturas, bombas, bypass, partidas e IA.</p>
             </div>
             <span className="hidden text-xs text-muted-foreground md:block">Clique em um chiller para abrir o cockpit detalhado</span>
           </div>
-          <div className="grid gap-4 xl:grid-cols-3">
+          <div className="grid gap-3 xl:grid-cols-3">
             {chillers.map((c) => (
               <ChillerCard key={c.id} chiller={c} />
             ))}
           </div>
         </section>
 
-        <aside className="space-y-4">
-          <div className="glass-card relative overflow-hidden p-5">
+        <aside className="space-y-3">
+          <div className="glass-card relative overflow-hidden p-4">
             <div className="absolute right-0 top-0 h-32 w-32 rounded-full bg-status-ai/20 blur-3xl" />
             <div className="relative">
               <div className="mb-4 flex items-center justify-between">
@@ -263,7 +263,7 @@ function Index() {
             </div>
           </div>
 
-          <div className="glass-card p-5">
+          <div className="glass-card p-3.5">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="font-display text-sm font-semibold">Eventos Recentes</h3>
               <span className="text-[10px] text-muted-foreground">tempo real</span>
@@ -293,7 +293,6 @@ function Index() {
       </div>
 
       <ComparisonPanel />
-      <OperationalIndicators />
     </div>
   );
 }
