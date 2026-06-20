@@ -9,13 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TrendsRouteImport } from './routes/trends'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as EsgRouteImport } from './routes/esg'
+import { Route as PumpsRouteImport } from './routes/pumps'
 import { Route as ChillersRouteImport } from './routes/chillers'
-import { Route as AnalyticsRouteImport } from './routes/analytics'
+import { Route as AlarmsRouteImport } from './routes/alarms'
+import { Route as AiRouteImport } from './routes/ai'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ChillersIdRouteImport } from './routes/chillers.$id'
 
+const TrendsRoute = TrendsRouteImport.update({
+  id: '/trends',
+  path: '/trends',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -26,9 +34,9 @@ const ReportsRoute = ReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EsgRoute = EsgRouteImport.update({
-  id: '/esg',
-  path: '/esg',
+const PumpsRoute = PumpsRouteImport.update({
+  id: '/pumps',
+  path: '/pumps',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChillersRoute = ChillersRouteImport.update({
@@ -36,9 +44,14 @@ const ChillersRoute = ChillersRouteImport.update({
   path: '/chillers',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AnalyticsRoute = AnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
+const AlarmsRoute = AlarmsRouteImport.update({
+  id: '/alarms',
+  path: '/alarms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiRoute = AiRouteImport.update({
+  id: '/ai',
+  path: '/ai',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -46,64 +59,102 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChillersIdRoute = ChillersIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ChillersRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
-  '/chillers': typeof ChillersRoute
-  '/esg': typeof EsgRoute
+  '/ai': typeof AiRoute
+  '/alarms': typeof AlarmsRoute
+  '/chillers': typeof ChillersRouteWithChildren
+  '/pumps': typeof PumpsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
+  '/trends': typeof TrendsRoute
+  '/chillers/$id': typeof ChillersIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
-  '/chillers': typeof ChillersRoute
-  '/esg': typeof EsgRoute
+  '/ai': typeof AiRoute
+  '/alarms': typeof AlarmsRoute
+  '/chillers': typeof ChillersRouteWithChildren
+  '/pumps': typeof PumpsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
+  '/trends': typeof TrendsRoute
+  '/chillers/$id': typeof ChillersIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/analytics': typeof AnalyticsRoute
-  '/chillers': typeof ChillersRoute
-  '/esg': typeof EsgRoute
+  '/ai': typeof AiRoute
+  '/alarms': typeof AlarmsRoute
+  '/chillers': typeof ChillersRouteWithChildren
+  '/pumps': typeof PumpsRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
+  '/trends': typeof TrendsRoute
+  '/chillers/$id': typeof ChillersIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/analytics'
+    | '/ai'
+    | '/alarms'
     | '/chillers'
-    | '/esg'
+    | '/pumps'
     | '/reports'
     | '/settings'
+    | '/trends'
+    | '/chillers/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/analytics' | '/chillers' | '/esg' | '/reports' | '/settings'
+  to:
+    | '/'
+    | '/ai'
+    | '/alarms'
+    | '/chillers'
+    | '/pumps'
+    | '/reports'
+    | '/settings'
+    | '/trends'
+    | '/chillers/$id'
   id:
     | '__root__'
     | '/'
-    | '/analytics'
+    | '/ai'
+    | '/alarms'
     | '/chillers'
-    | '/esg'
+    | '/pumps'
     | '/reports'
     | '/settings'
+    | '/trends'
+    | '/chillers/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AnalyticsRoute: typeof AnalyticsRoute
-  ChillersRoute: typeof ChillersRoute
-  EsgRoute: typeof EsgRoute
+  AiRoute: typeof AiRoute
+  AlarmsRoute: typeof AlarmsRoute
+  ChillersRoute: typeof ChillersRouteWithChildren
+  PumpsRoute: typeof PumpsRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
+  TrendsRoute: typeof TrendsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/trends': {
+      id: '/trends'
+      path: '/trends'
+      fullPath: '/trends'
+      preLoaderRoute: typeof TrendsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -118,11 +169,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/esg': {
-      id: '/esg'
-      path: '/esg'
-      fullPath: '/esg'
-      preLoaderRoute: typeof EsgRouteImport
+    '/pumps': {
+      id: '/pumps'
+      path: '/pumps'
+      fullPath: '/pumps'
+      preLoaderRoute: typeof PumpsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/chillers': {
@@ -132,11 +183,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChillersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/analytics': {
-      id: '/analytics'
-      path: '/analytics'
-      fullPath: '/analytics'
-      preLoaderRoute: typeof AnalyticsRouteImport
+    '/alarms': {
+      id: '/alarms'
+      path: '/alarms'
+      fullPath: '/alarms'
+      preLoaderRoute: typeof AlarmsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai': {
+      id: '/ai'
+      path: '/ai'
+      fullPath: '/ai'
+      preLoaderRoute: typeof AiRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -146,16 +204,37 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/chillers/$id': {
+      id: '/chillers/$id'
+      path: '/$id'
+      fullPath: '/chillers/$id'
+      preLoaderRoute: typeof ChillersIdRouteImport
+      parentRoute: typeof ChillersRoute
+    }
   }
 }
 
+interface ChillersRouteChildren {
+  ChillersIdRoute: typeof ChillersIdRoute
+}
+
+const ChillersRouteChildren: ChillersRouteChildren = {
+  ChillersIdRoute: ChillersIdRoute,
+}
+
+const ChillersRouteWithChildren = ChillersRoute._addFileChildren(
+  ChillersRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AnalyticsRoute: AnalyticsRoute,
-  ChillersRoute: ChillersRoute,
-  EsgRoute: EsgRoute,
+  AiRoute: AiRoute,
+  AlarmsRoute: AlarmsRoute,
+  ChillersRoute: ChillersRouteWithChildren,
+  PumpsRoute: PumpsRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
+  TrendsRoute: TrendsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
