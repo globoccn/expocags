@@ -38,7 +38,6 @@ export function EquipmentRender({
 }) {
   const p = palette[chillerId];
   const height = size === "lg" ? "h-[330px]" : size === "sm" ? "h-[132px]" : "h-[185px]";
-  const labelSize = size === "lg" ? "text-[11px]" : "text-[8px]";
   const accentWidth = size === "lg" ? "w-32" : "w-16";
 
   return (
@@ -63,7 +62,7 @@ export function EquipmentRender({
       <img
         src="/assets/chiller-render-base.png"
         alt={p.label}
-        className="absolute inset-0 h-full w-full object-cover object-center opacity-95 transition-transform duration-500 group-hover:scale-[1.025]"
+        className="absolute inset-0 h-full w-full object-contain object-center opacity-95 transition-transform duration-500 group-hover:scale-[1.025]"
         style={{ filter: p.filter }}
       />
 
@@ -72,12 +71,6 @@ export function EquipmentRender({
       <div className={cn("absolute left-0 top-0 h-full", accentWidth)} style={{ background: `linear-gradient(90deg, ${p.accent}, transparent)` }} />
       <div className={cn("absolute right-0 top-0 h-full", accentWidth)} style={{ background: `linear-gradient(270deg, ${p.accent}, transparent)` }} />
 
-      <div
-        className={cn("absolute left-4 top-3 rounded border px-2 py-1 font-mono uppercase tracking-[0.24em]", labelSize)}
-        style={{ color: p.main, borderColor: p.main, background: "rgba(0,0,0,.35)" }}
-      >
-        {p.label}
-      </div>
 
       {highlight !== "none" && (
         <div className="absolute right-4 top-4 rounded-md border border-status-alert/60 bg-status-alert/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-status-alert shadow-[0_0_20px_rgba(255,166,0,.22)]">
