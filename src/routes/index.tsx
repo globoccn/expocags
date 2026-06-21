@@ -86,7 +86,7 @@ const decisionCards = [
   { label: "O que piorou?", value: "Bypass + Delta T", desc: "Chiller Vermelho saiu do padrão semanal", tone: "alert" },
   { label: "Possível causa", value: "Recirculação", desc: "Bypass elevado associado à baixa troca térmica", tone: "ai" },
   { label: "Onde agir primeiro", value: "Bombas / Bypass", desc: "Verificar válvula bypass e modo das bombas", tone: "warn" },
-  { label: "Impacto estimado", value: "Eficiência ↓", desc: "Operação térmica menos eficiente no período", tone: "alert" },
+  { label: "Impacto estimado", value: "Desempenho ↓", desc: "Operação térmica com menor estabilidade no período", tone: "alert" },
 ] as const;
 
 function Index() {
@@ -96,7 +96,7 @@ function Index() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-            <Radio className="h-3 w-3 text-status-ok animate-pulse-glow" /> Cockpit Operacional · Tempo Real
+            <Radio className="h-3 w-3 text-status-ok animate-pulse-glow" /> Home Analítica · Dados Consolidados
           </div>
           <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
             Visão Geral da <span className="text-primary text-glow">Central</span>
@@ -105,7 +105,7 @@ function Index() {
         </div>
         <div className="flex items-center gap-2">
           <SeverityBadge severity={homeIntel.status} />
-          <span className="hidden text-[10px] text-muted-foreground md:inline">Atualizado em tempo real</span>
+          <span className="hidden text-[10px] text-muted-foreground md:inline">Análise consolidada</span>
         </div>
       </div>
 
@@ -167,7 +167,7 @@ function Index() {
             </div>
 
             <p className="mt-3 text-[12px] leading-relaxed text-foreground/90">
-              O <span className="font-semibold" style={{ color: chillerTheme.red.hex }}>Chiller Vermelho</span> concentra a maior carga, possui queda de Δ T frente à média semanal e bypass acima do padrão. O padrão sugere recirculação hidráulica ou baixa troca térmica efetiva.
+              Durante o D-1, o <span className="font-semibold" style={{ color: chillerTheme.red.hex }}>Chiller Vermelho</span> concentrou a maior carga, apresentou queda de Δ T frente à média semanal e bypass acima do padrão. O padrão sugere recirculação hidráulica ou baixa troca térmica efetiva.
             </p>
 
             <div className="mt-3 grid grid-cols-2 gap-2">
@@ -204,7 +204,7 @@ function Index() {
           {/* Timeline preview */}
           <div className="relative mt-4 border-t border-border/40 pt-3">
             <div className="mb-2 flex items-center justify-between">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">Tendências (últimas 6h)</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">Eventos do D-1</div>
               <button className="text-[10px] text-muted-foreground hover:text-foreground">Ver todos</button>
             </div>
             <ul className="space-y-2">
@@ -231,7 +231,7 @@ function Index() {
           <div className="mb-3 flex items-end justify-between">
             <div>
               <h3 className="font-display text-sm font-bold uppercase tracking-wider">O que mudou no período</h3>
-              <p className="text-[10px] text-muted-foreground">Comparação executiva · Hoje × Ontem × 7 dias</p>
+              <p className="text-[10px] text-muted-foreground">Comparação executiva · D-1 × D-2 × média 7 dias</p>
             </div>
             <button className="text-[10px] text-muted-foreground hover:text-foreground">Ver todos →</button>
           </div>
@@ -263,7 +263,7 @@ function Index() {
           <div className="mb-3 flex items-center justify-between">
             <div>
               <h3 className="font-display text-sm font-bold uppercase tracking-wider">Ranking Operacional</h3>
-              <p className="text-[10px] text-muted-foreground">Por saúde · capacidade · eficiência</p>
+              <p className="text-[10px] text-muted-foreground">Por saúde · capacidade · estabilidade</p>
             </div>
             <Trophy className="h-4 w-4 text-status-warn" />
           </div>
@@ -283,7 +283,7 @@ function Index() {
                     </div>
                     <div className="text-right">
                       <div className="font-display text-base font-bold tabular-nums" style={{ color: t.hex }}>{r.score}<span className="text-[10px] text-muted-foreground">/100</span></div>
-                      <div className="text-[9px] text-muted-foreground">Cap. {r.capacity}% · Ef. {r.efficiency}%</div>
+                      <div className="text-[9px] text-muted-foreground">Cap. {r.capacity}% · Est. {r.stability}%</div>
                     </div>
                   </div>
                 </li>
@@ -298,13 +298,13 @@ function Index() {
         <div className="mb-3 flex items-end justify-between">
           <div>
             <h3 className="font-display text-sm font-bold uppercase tracking-wider">Comparativos Temporais</h3>
-            <p className="text-[10px] text-muted-foreground">Hoje × Ontem × Média 7 dias × Média 30 dias · preparado para JSON do n8n</p>
+            <p className="text-[10px] text-muted-foreground">D-1 × D-2 × média 7 dias × média 30 dias</p>
           </div>
           <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">Análise executiva</span>
         </div>
         <div className="overflow-hidden rounded-lg border border-border/35">
           <div className="grid grid-cols-[1.4fr_repeat(5,0.8fr)] bg-surface-2/45 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            <div>Métrica</div><div>Hoje</div><div>Ontem</div><div>7 dias</div><div>30 dias</div><div>Tendência</div>
+            <div>Métrica</div><div>D-1</div><div>D-2</div><div>Média 7d</div><div>Média 30d</div><div>Tendência</div>
           </div>
           {temporalMatrix.map((row) => (
             <div key={row.metric} className="grid grid-cols-[1.4fr_repeat(5,0.8fr)] border-t border-border/30 px-3 py-2 text-[12px]">

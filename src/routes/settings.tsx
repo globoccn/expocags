@@ -86,7 +86,7 @@ function SettingsPage() {
             <label className="flex items-center justify-between">
               <span>Período padrão</span>
               <select className="rounded-md border border-border bg-surface-2/60 px-2 py-1 text-xs">
-                <option>Hoje</option>
+                <option>D-1</option>
                 <option>Últimas 24h</option>
               </select>
             </label>

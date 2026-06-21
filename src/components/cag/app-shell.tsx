@@ -12,7 +12,6 @@ import {
   Moon,
   Settings,
   Signal,
-  Star,
   Sun,
   Wand2,
   Wifi,
@@ -21,7 +20,8 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { useTheme } from "./theme-provider";
 import { cn } from "@/lib/utils";
-import { periodOptions } from "@/data/mockCagData";
+import { compareOptions, periodOptions } from "@/data/mockCagData";
+import centerNorteLogo from "@/assets/center-norte-logo.jpg";
 
 const nav = [
   { to: "/", label: "Visão Geral", icon: LayoutDashboard },
@@ -38,7 +38,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { theme, setTheme } = useTheme();
   const [now, setNow] = useState("");
-  const [period, setPeriod] = useState("today");
+  const [period, setPeriod] = useState("d1");
 
   useEffect(() => {
     const tick = () => {
@@ -52,17 +52,17 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const cycleTheme = () => setTheme(theme === "dark" ? "light" : theme === "light" ? "auto" : "dark");
   const ThemeIcon = theme === "dark" ? Moon : theme === "light" ? Sun : Wand2;
-  const [compare, setCompare] = useState("yesterday");
+  const [compare, setCompare] = useState("d2");
 
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
       {/* Sidebar */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-border/40 bg-sidebar/60 backdrop-blur-xl lg:flex">
         <div className="border-b border-border/40 px-4 py-4">
-          <div className="flex items-center gap-2">
-            <div className="relative grid h-9 w-9 place-items-center rounded-md border border-primary/50 bg-gradient-to-br from-primary/30 to-status-ai/30">
-              <Star className="h-4 w-4 text-primary" />
-              <div className="absolute inset-0 rounded-md ring-1 ring-primary/40" />
+          <div className="flex items-center gap-3">
+            <div className="relative h-11 w-11 overflow-hidden rounded-md border border-primary/35 bg-white/95 p-1 shadow-[0_0_18px_rgba(0,180,255,0.18)]">
+              <img src={centerNorteLogo} alt="Center Norte" className="h-full w-full object-contain" />
+              <div className="absolute inset-0 rounded-md ring-1 ring-primary/20" />
             </div>
             <div className="leading-tight">
               <div className="font-display text-[13px] font-bold tracking-[0.18em]">EXPO</div>
@@ -101,9 +101,9 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className="absolute inset-0 rounded-full bg-status-ok animate-pulse-glow" />
               <span className="h-1 w-1 rounded-full bg-status-ok" />
             </span>
-            <span className="text-status-ok">n8n · conectado</span>
+            <span className="text-status-ok">Sistema · conectado</span>
           </div>
-          <div>Última sincronização</div>
+          <div>Última atualização</div>
           <div className="font-mono text-foreground/80">{now || "--:--:--"}</div>
           <div className="pt-1 text-[9px] uppercase tracking-[0.18em] opacity-60">v1.0 · build 2026.06</div>
         </div>
@@ -114,7 +114,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/40 bg-background/70 px-4 backdrop-blur-xl">
           <div className="hidden md:block">
             <div className="font-display text-sm font-semibold leading-none">Visão Geral da Central</div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Expo Center Norte · Home Analítica</div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Expo Center Norte · Análise Operacional</div>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <div className="hidden items-center gap-1 rounded-md border border-border bg-surface-2/60 px-2 py-1 text-[10px] md:flex">
@@ -125,7 +125,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   onChange={(e) => setPeriod(e.target.value)}
                   className="appearance-none bg-transparent pr-4 text-[11px] font-semibold focus:outline-none"
                 >
-                  {periodOptions.slice(0, 5).map((p) => (
+                  {periodOptions.map((p) => (
                     <option key={p.value} value={p.value}>{p.label}</option>
                   ))}
                 </select>
@@ -140,16 +140,24 @@ export function AppShell({ children }: { children: ReactNode }) {
                   onChange={(e) => setCompare(e.target.value)}
                   className="appearance-none bg-transparent pr-4 text-[11px] font-semibold focus:outline-none"
                 >
-                  {periodOptions.slice(0, 5).map((p) => (
+                  {compareOptions.map((p) => (
                     <option key={p.value} value={p.value}>{p.label}</option>
                   ))}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
               </div>
             </div>
+            <div className="hidden items-center gap-3 rounded-md border border-border bg-surface-2/50 px-2.5 py-1 text-[10px] xl:flex">
+              <span className="text-muted-foreground">Data operacional</span>
+              <span className="font-semibold">19/06/2026 (D-1)</span>
+            </div>
+            <div className="hidden items-center gap-3 rounded-md border border-border bg-surface-2/50 px-2.5 py-1 text-[10px] 2xl:flex">
+              <span className="text-muted-foreground">Atualizado em</span>
+              <span className="font-semibold">20/06/2026 06:05</span>
+            </div>
             <div className="hidden items-center gap-1.5 rounded-md border border-status-ok/40 bg-status-ok/10 px-2.5 py-1 text-[11px] text-status-ok md:flex">
               <Signal className="h-3 w-3 animate-pulse-glow" />
-              <span>ONLINE</span>
+              <span>DISPONÍVEL</span>
             </div>
             <button
               onClick={cycleTheme}

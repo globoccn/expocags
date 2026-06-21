@@ -75,7 +75,7 @@ function ChillerPage() {
           <h1 className="font-display text-3xl font-bold" style={{ color }}>
             {c.name}
           </h1>
-          <p className="text-sm text-muted-foreground">Cockpit do equipamento · diagnóstico em tempo real</p>
+          <p className="text-sm text-muted-foreground">Cockpit do equipamento · análise operacional consolidada</p>
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge status={c.status} />
@@ -310,7 +310,7 @@ function ChillerPage() {
             <div><span className="text-muted-foreground">Causa provável:</span> Desbalanceamento hidráulico / bypass aberto.</div>
             <div><span className="text-muted-foreground">Confiança:</span> <span className="text-status-ai font-semibold">92%</span></div>
             <div><span className="text-muted-foreground">Recomendação:</span> Inspecionar válvula bypass e ajustar setpoint.</div>
-            <div><span className="text-muted-foreground">Impacto:</span> Eficiência -12%, consumo +8%.</div>
+            <div><span className="text-muted-foreground">Impacto:</span> Queda de desempenho operacional e maior instabilidade térmica.</div>
             <div className="flex items-center gap-2"><span className="text-muted-foreground">Severidade:</span> <SeverityBadge severity={c.risk} /></div>
           </div>
           <div className="mt-3 flex items-center gap-2 rounded-md border border-status-ai/30 bg-status-ai/5 p-2 text-xs">

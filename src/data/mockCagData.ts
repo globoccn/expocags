@@ -281,7 +281,7 @@ export const aiInsights = [
     confidence: 0.92,
     cause: "Possível bypass aberto reduzindo troca térmica efetiva.",
     recommendation: "Inspecionar válvula bypass e ajustar setpoint hidráulico.",
-    impact: "Redução de eficiência ~12% e aumento do consumo elétrico.",
+    impact: "Queda de desempenho operacional e maior instabilidade térmica.",
     occurredAt: "há 14 min",
     status: "ativo" as const,
   },
@@ -383,14 +383,17 @@ export const plant = {
 };
 
 export const periodOptions = [
-  { value: "today", label: "Hoje" },
-  { value: "yesterday", label: "Ontem" },
-  { value: "24h", label: "Últimas 24h" },
-  { value: "7d", label: "Últimos 7 dias" },
-  { value: "30d", label: "Últimos 30 dias" },
-  { value: "mtd", label: "Este mês" },
-  { value: "lastmonth", label: "Mês passado" },
-  { value: "custom", label: "Personalizado" },
+  { value: "d1", label: "D-1" },
+  { value: "7d", label: "7 dias" },
+  { value: "30d", label: "30 dias" },
+  { value: "month", label: "Mês" },
+];
+
+export const compareOptions = [
+  { value: "d2", label: "D-2" },
+  { value: "avg7", label: "Média 7 dias" },
+  { value: "avg30", label: "Média 30 dias" },
+  { value: "same-weekday", label: "Mesmo dia semana anterior" },
 ];
 
 export const healthFactors = [
@@ -412,7 +415,7 @@ export const getChiller = (id: string): ChillerData | undefined =>
 
 /* ============================================================
  * HOME ANALYTICS — comparativos, ranking, correlações, timeline
- * Todos os valores são MOCKADOS para demonstração visual.
+ * Valores demonstrativos para validação visual.
  * ============================================================ */
 
 const spark = (n: number, base: number, jit: number, drift = 0) =>
@@ -436,14 +439,14 @@ export interface KpiSpark {
 }
 
 export const headerKpis: KpiSpark[] = [
-  { key: "health", label: "Saúde Geral", value: "81", unit: "/100", delta: "↓ 4 pts vs ontem", trend: "down", tone: "warn", spark: spark(24, 82, 3, -2) },
+  { key: "health", label: "Saúde Geral", value: "81", unit: "/100", delta: "↓ 4 pts vs D-2", trend: "down", tone: "warn", spark: spark(24, 82, 3, -2) },
   { key: "deltaT", label: "Delta T Médio", value: "4.4", unit: "°C", delta: "↓ 18% vs média 7d", trend: "down", tone: "alert", spark: spark(24, 4.6, 0.4, -0.4) },
   { key: "bypass", label: "Bypass Médio", value: "34", unit: "%", delta: "↑ 42% vs média 7d", trend: "up", tone: "alert", spark: spark(24, 28, 6, 8) },
   { key: "online", label: "Chillers Online", value: "2/3", delta: "1 em manutenção", trend: "flat", tone: "ok", spark: spark(24, 2.8, 0.2) },
   { key: "pumps", label: "Bombas Atenção", value: "4", delta: "2 alarmes ativos", trend: "up", tone: "warn", spark: spark(24, 3, 1, 1) },
   { key: "comps", label: "Compressores", value: "9/12", delta: "75% em operação", trend: "flat", tone: "info", spark: spark(24, 9, 0.6) },
-  { key: "events", label: "Eventos 24h", value: "23", delta: "↑ 6 vs ontem", trend: "up", tone: "default", spark: spark(24, 18, 4, 5) },
-  { key: "comm", label: "Comunicação", value: "Online", delta: "n8n / SCADA", trend: "flat", tone: "ok", spark: spark(24, 1, 0) },
+  { key: "events", label: "Eventos D-1", value: "23", delta: "↑ 6 vs D-2", trend: "up", tone: "default", spark: spark(24, 18, 4, 5) },
+  { key: "comm", label: "Comunicação", value: "Online", delta: "Dados disponíveis", trend: "flat", tone: "ok", spark: spark(24, 1, 0) },
 ];
 
 export interface Comparative {
@@ -459,43 +462,43 @@ export interface Comparative {
 
 export const comparatives: Comparative[] = [
   { key: "health", label: "Saúde Geral", value: "81", unit: "/100",
-    d1: { label: "vs ontem", delta: "↓ 4 pts", trend: "down" },
+    d1: { label: "vs D-2", delta: "↓ 4 pts", trend: "down" },
     d7: { label: "vs 7d", delta: "↓ 6 pts", trend: "down" },
     spark: spark(24, 84, 3, -3), tone: "warn" },
   { key: "dt", label: "Δ T Médio", value: "4.4", unit: "°C",
-    d1: { label: "vs ontem", delta: "↓ 0.5", trend: "down" },
+    d1: { label: "vs D-2", delta: "↓ 0.5", trend: "down" },
     d7: { label: "vs 7d", delta: "↓ 18%", trend: "down" },
     spark: spark(24, 5.0, 0.4, -0.6), tone: "alert" },
   { key: "bp", label: "Bypass Médio", value: "34", unit: "%",
-    d1: { label: "vs ontem", delta: "↑ 4 pp", trend: "up" },
+    d1: { label: "vs D-2", delta: "↑ 4 pp", trend: "up" },
     d7: { label: "vs 7d", delta: "↑ 42%", trend: "up" },
     spark: spark(24, 26, 5, 8), tone: "alert" },
   { key: "cap", label: "Capacidade Média", value: "75", unit: "%",
-    d1: { label: "vs ontem", delta: "↑ 3 pp", trend: "up" },
+    d1: { label: "vs D-2", delta: "↑ 3 pp", trend: "up" },
     d7: { label: "vs 7d", delta: "↑ 16%", trend: "up" },
     spark: spark(24, 68, 6, 7), tone: "info" },
   { key: "err", label: "Erro Setpoint", value: "+0.4", unit: "°C",
-    d1: { label: "vs ontem", delta: "↑ 0.1", trend: "up" },
+    d1: { label: "vs D-2", delta: "↑ 0.1", trend: "up" },
     d7: { label: "vs 7d", delta: "↑ 100%", trend: "up" },
     spark: spark(24, 0.3, 0.15, 0.1), tone: "warn" },
   { key: "pr", label: "Pressão Linha", value: "6.2", unit: "bar",
-    d1: { label: "vs ontem", delta: "↓ 8%", trend: "down" },
+    d1: { label: "vs D-2", delta: "↓ 8%", trend: "down" },
     d7: { label: "vs 7d", delta: "↓ 8%", trend: "down" },
     spark: spark(24, 6.6, 0.3, -0.4), tone: "warn" },
   { key: "ext", label: "Temp. Externa", value: "31.5", unit: "°C",
-    d1: { label: "vs ontem", delta: "↑ 4°", trend: "up" },
+    d1: { label: "vs D-2", delta: "↑ 4°", trend: "up" },
     d7: { label: "vs 7d", delta: "↑ 4°", trend: "up" },
     spark: spark(24, 27, 3, 4), tone: "default" },
-  { key: "starts", label: "Partidas (24h)", value: "187", delta: "↑ 22%",
-    d1: { label: "vs ontem", delta: "↑ 22%", trend: "up" },
+  { key: "starts", label: "Partidas (D-1)", value: "187", delta: "↑ 22%",
+    d1: { label: "vs D-2", delta: "↑ 22%", trend: "up" },
     d7: { label: "vs 7d", delta: "↑ 38%", trend: "up" },
     spark: spark(24, 140, 20, 50), tone: "alert" } as Comparative,
 ];
 
 export const ranking = [
-  { pos: 1, chiller: "blue" as ChillerId, name: "Chiller Azul", score: 92, capacity: 74, efficiency: 96 },
-  { pos: 2, chiller: "white" as ChillerId, name: "Chiller Branco", score: 84, capacity: 70, efficiency: 88 },
-  { pos: 3, chiller: "red" as ChillerId, name: "Chiller Vermelho", score: 68, capacity: 82, efficiency: 74 },
+  { pos: 1, chiller: "blue" as ChillerId, name: "Chiller Azul", score: 92, capacity: 74, stability: 96 },
+  { pos: 2, chiller: "white" as ChillerId, name: "Chiller Branco", score: 84, capacity: 70, stability: 88 },
+  { pos: 3, chiller: "red" as ChillerId, name: "Chiller Vermelho", score: 68, capacity: 82, stability: 74 },
 ];
 
 export interface Correlation {
@@ -510,7 +513,7 @@ export interface Correlation {
 export const correlations: Correlation[] = [
   { key: "c1", title: "Δ T baixo + Bypass alto", desc: "Risco de recirculação hidráulica", impact: "Alto", scope: "Chiller Vermelho", tone: "alert" },
   { key: "c2", title: "Temp. externa alta + Carga alta", desc: "Comportamento dentro do esperado", impact: "Médio", scope: "Central", tone: "info" },
-  { key: "c3", title: "Erro setpoint + Carga alta", desc: "Consumo energético elevado", impact: "Alto", scope: "Chiller Vermelho", tone: "alert" },
+  { key: "c3", title: "Erro setpoint + Carga alta", desc: "Esforço operacional elevado", impact: "Alto", scope: "Chiller Vermelho", tone: "alert" },
   { key: "c4", title: "Pressão abaixo do setpoint", desc: "Risco de vazão insuficiente", impact: "Médio", scope: "Bombas", tone: "warn" },
   { key: "c5", title: "Muitas partidas + Baixa carga", desc: "Desgaste mecânico elevado", impact: "Médio", scope: "Chiller Branco", tone: "warn" },
 ];
@@ -527,7 +530,7 @@ export interface TimelineItem {
 
 export const homeTimeline: TimelineItem[] = [
   { id: "t1", time: "22:14", chiller: "red", title: "Chiller Vermelho", desc: "Bypass aumentou para 58%.", tone: "alert", spark: spark(16, 40, 6, 18) },
-  { id: "t2", time: "21:48", chiller: "red", title: "Bypass Vermelho", desc: "Δ T de 28u para 3.4°C.", tone: "warn", spark: spark(16, 4.2, 0.5, -0.8) },
+  { id: "t2", time: "21:48", chiller: "red", title: "Bypass Vermelho", desc: "Δ T caiu para 3.4°C.", tone: "warn", spark: spark(16, 4.2, 0.5, -0.8) },
   { id: "t3", time: "21:32", chiller: "red", title: "Bombas", desc: "BAG2 entrou em falha.", tone: "crit", spark: spark(16, 3.1, 0.2, -0.5) },
   { id: "t4", time: "21:10", chiller: "blue", title: "Saúde geral", desc: "Carga aumentou para 74%.", tone: "info", spark: spark(16, 60, 6, 14) },
   { id: "t5", time: "20:45", chiller: "white", title: "Compressor A2", desc: "Partidas excessivas detectadas.", tone: "warn", spark: spark(16, 6, 1.4, 3) },
@@ -535,10 +538,10 @@ export const homeTimeline: TimelineItem[] = [
 ];
 
 export const homeIntel = {
-  resumo: "O Chiller Vermelho concentra a maior carga, possui queda de Delta T frente à média semanal e bypass acima do padrão. O padrão sugere recirculação hidráulica ou baixa troca térmica efetiva.",
+  resumo: "Durante o D-1, o Chiller Vermelho concentrou a maior carga, apresentou queda de Delta T frente à média semanal e bypass acima do padrão. O padrão sugere recirculação hidráulica ou baixa troca térmica efetiva.",
   equipamento: "Chiller Vermelho — Circuito A/B",
   causa: "Recirculação hidráulica",
-  impacto: "Eficiência reduzida",
+  impacto: "Desempenho reduzido",
   confianca: 92,
   acao: "Inspecionar válvula bypass, balanceamento hidráulico e operação das bombas.",
   status: "alert" as Severity,
