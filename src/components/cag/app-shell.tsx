@@ -2,22 +2,15 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   AlertTriangle,
   BarChart3,
-  Bell,
   Brain,
   CircuitBoard,
   Droplets,
   FileText,
   LayoutDashboard,
-  Moon,
   Settings,
-  Signal,
-  Sun,
-  Wand2,
-  Wifi,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { useTheme } from "./theme-provider";
 import { cn } from "@/lib/utils";
 import centerNorteLogo from "@/assets/center-norte-logo.jpg";
 
@@ -34,7 +27,6 @@ const nav = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { theme, setTheme } = useTheme();
   const [now, setNow] = useState("");
   const [period, setPeriod] = useState("d1");
 
@@ -50,9 +42,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => clearInterval(i);
   }, []);
 
-  const cycleTheme = () =>
-    setTheme(theme === "dark" ? "light" : theme === "light" ? "auto" : "dark");
-  const ThemeIcon = theme === "dark" ? Moon : theme === "light" ? Sun : Wand2;
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
       {/* Sidebar */}
@@ -130,7 +119,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Header */}
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/40 bg-background/70 px-4 backdrop-blur-xl">
+        <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-border/40 bg-background/70 px-4 backdrop-blur-xl">
           <div className="hidden md:block">
             <div className="font-display text-sm font-semibold leading-none">
               Visão Geral da Central
@@ -161,21 +150,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </button>
               ))}
             </div>
-            <div className="hidden items-center gap-1.5 rounded-md border border-status-ok/40 bg-status-ok/10 px-2.5 py-1 text-[11px] text-status-ok md:flex">
-              <Signal className="h-3 w-3 animate-pulse-glow" />
-              <span>DISPONÍVEL</span>
-            </div>
-            <button
-              onClick={cycleTheme}
-              title={`Tema: ${theme}`}
-              className="grid h-8 w-8 place-items-center rounded-md border border-border bg-surface-2/60 text-muted-foreground transition hover:text-foreground"
-            >
-              <ThemeIcon className="h-3.5 w-3.5" />
-            </button>
-            <button className="relative grid h-8 w-8 place-items-center rounded-md border border-border bg-surface-2/60 text-muted-foreground hover:text-foreground">
-              <Bell className="h-3.5 w-3.5" />
-              <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-status-alert animate-pulse-glow" />
-            </button>
             <div className="hidden font-mono text-xs text-muted-foreground md:block">{now}</div>
             <div className="grid h-8 w-8 place-items-center rounded-full border border-primary/40 bg-primary/10 text-[11px] font-bold text-primary">
               OP

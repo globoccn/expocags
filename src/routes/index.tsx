@@ -161,18 +161,6 @@ const decisionCards = [
 function Index() {
   return (
     <div className="space-y-5">
-      {/* Page title */}
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
-            Visão Geral da <span className="text-primary text-glow">Central</span>
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            Expo Center Norte · Centro de Inteligência Operacional
-          </p>
-        </div>
-      </div>
-
       {/* Header KPIs */}
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8">
         {headerKpis.map((k) => (
