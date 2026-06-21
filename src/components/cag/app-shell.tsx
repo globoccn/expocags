@@ -57,15 +57,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen w-full bg-background text-foreground">
       {/* Sidebar */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-border/40 bg-sidebar/60 backdrop-blur-xl lg:flex">
-        <div className="flex items-center gap-2 border-b border-border/40 px-5 py-4">
-          <div className="relative grid h-8 w-8 place-items-center rounded-md bg-gradient-to-br from-primary to-status-ai">
-            <CircuitBoard className="h-4 w-4 text-primary-foreground" />
-            <div className="absolute inset-0 rounded-md ring-1 ring-primary/40" />
-          </div>
-          <div>
-            <div className="font-display text-sm font-bold leading-none">CAG</div>
-            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Intelligence AI</div>
-          </div>
+        <div className="border-b border-border/40 px-5 py-5">
+          <div className="font-display text-2xl font-black leading-none tracking-tight text-foreground">★ EXPO</div>
+          <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Center Norte</div>
+          <div className="mt-5 text-sm font-bold uppercase leading-tight tracking-[0.12em] text-foreground/90">CAG</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Centrais de<br />Água Gelada</div>
         </div>
         <nav className="flex-1 space-y-0.5 px-3 py-4">
           {nav.map((item) => {
@@ -101,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/40 bg-background/70 px-4 backdrop-blur-xl">
           <div className="hidden md:block">
             <div className="font-display text-sm font-semibold leading-none">Central de Água Gelada</div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Planta Industrial · Setor Norte</div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Expo Center Norte · CAG principal e Pavimento Branco</div>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <div className="relative">
