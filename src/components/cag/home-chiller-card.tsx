@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, CheckCircle2, Info, Sparkles } from "lucide-react";
-import chillerAsset from "@/assets/chiller.png.asset.json";
+import chillerImage from "@/assets/chiller.png";
 import { chillerInsight, chillerTheme, type ChillerData } from "@/data/mockCagData";
 import { cn } from "@/lib/utils";
 
@@ -45,17 +45,17 @@ function MiniMetric({ label, value, unit, tone }: { label: string; value: string
 }
 
 function HealthMini({ score, color }: { score: number; color: string }) {
-  const r = 15;
+  const r = 13;
   const c = 2 * Math.PI * r;
   const dash = (score / 100) * c;
   return (
-    <div className="relative h-11 w-11 shrink-0">
-      <svg viewBox="0 0 40 40" className="h-11 w-11 -rotate-90">
-        <circle cx="20" cy="20" r={r} stroke="var(--border)" strokeWidth="3" fill="none" opacity="0.45" />
-        <circle cx="20" cy="20" r={r} stroke={color} strokeWidth="3" strokeLinecap="round" fill="none" strokeDasharray={`${dash} ${c}`} style={{ filter: `drop-shadow(0 0 5px ${color})` }} />
+    <div className="relative h-10 w-10 shrink-0">
+      <svg viewBox="0 0 40 40" className="h-10 w-10 -rotate-90">
+        <circle cx="20" cy="20" r={r} stroke="var(--border)" strokeWidth="2.7" fill="none" opacity="0.45" />
+        <circle cx="20" cy="20" r={r} stroke={color} strokeWidth="2.7" strokeLinecap="round" fill="none" strokeDasharray={`${dash} ${c}`} style={{ filter: `drop-shadow(0 0 5px ${color})` }} />
       </svg>
       <div className="absolute inset-0 grid place-items-center">
-        <span className="font-display text-[13px] font-bold tabular-nums" style={{ color }}>{score}</span>
+        <span className="font-display text-[12px] font-bold tabular-nums" style={{ color }}>{score}</span>
       </div>
     </div>
   );
@@ -107,7 +107,7 @@ export function HomeChillerCard({ chiller }: { chiller: ChillerData }) {
         </span>
       </div>
 
-      <div className="relative z-0 mt-2 h-[205px] overflow-hidden rounded-xl border border-border/25 bg-black/10">
+      <div className="relative z-0 mt-2 h-[222px] overflow-hidden rounded-xl border border-border/25 bg-black/10">
         <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: `linear-gradient(90deg, transparent, ${halo.replace("0.62", "0.18")}, transparent)` }} />
         <div className="pointer-events-none absolute inset-0">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -120,22 +120,22 @@ export function HomeChillerCard({ chiller }: { chiller: ChillerData }) {
         </div>
         <div className="pointer-events-none absolute left-1/2 top-1/2 h-56 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full blur-xl" style={{ background: `radial-gradient(closest-side, ${halo}, transparent 72%)` }} />
         <img
-          src={chillerAsset.url}
+          src={chillerImage}
           alt={chiller.name}
           loading="lazy"
           draggable={false}
-          className="absolute bottom-6 left-1/2 z-10 h-[178px] w-auto max-w-[112%] -translate-x-1/2 object-contain transition-transform duration-500 group-hover:scale-[1.04]"
+          className="absolute bottom-3 left-1/2 z-10 h-[215px] w-auto max-w-[132%] -translate-x-1/2 object-contain transition-transform duration-500 group-hover:scale-[1.04]"
           style={{ filter: `drop-shadow(0 18px 22px ${halo}) drop-shadow(0 0 34px ${halo})` }}
         />
         <div
-          className="pointer-events-none absolute bottom-7 left-1/2 z-20 h-4 w-[70%] -translate-x-1/2 rounded-[50%]"
+          className="pointer-events-none absolute bottom-5 left-1/2 z-20 h-5 w-[76%] -translate-x-1/2 rounded-[50%]"
           style={{ background: `radial-gradient(closest-side, ${accent}, transparent 72%)`, boxShadow: `0 0 24px 5px ${halo}`, opacity: 0.9 }}
         />
         <div className="absolute bottom-0 left-6 right-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
       </div>
 
-      <div className="relative z-10 mt-2.5 grid grid-cols-[1.35fr_1fr_1fr] gap-2">
-        <div className="flex items-center gap-2 rounded-lg border border-border/35 bg-black/20 p-2">
+      <div className="relative z-10 mt-2.5 grid grid-cols-[1.2fr_1fr_1fr] gap-2">
+        <div className="flex items-center gap-1.5 rounded-lg border border-border/35 bg-black/20 p-1.5">
           <HealthMini score={chiller.healthScore} color={healthCls.color} />
           <div className="min-w-0">
             <div className="text-[8.5px] uppercase tracking-[0.16em] text-muted-foreground">Health Score</div>
