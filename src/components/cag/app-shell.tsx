@@ -95,23 +95,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="space-y-2 border-t border-border/40 px-3 py-3 text-[10px] text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <span className="relative grid h-2 w-2 place-items-center">
-              <span className="absolute inset-0 rounded-full bg-status-ok animate-pulse-glow" />
-              <span className="h-1 w-1 rounded-full bg-status-ok" />
-            </span>
-            <span className="text-status-ok">Sistema disponível</span>
-          </div>
-          <div className="rounded-md border border-border/35 bg-surface-2/35 p-2">
-            <div className="uppercase tracking-[0.16em] opacity-70">Dados da base</div>
-            <div className="mt-0.5 font-mono text-foreground/80">19/06/2026 (D-1)</div>
-          </div>
-          <div className="rounded-md border border-border/35 bg-surface-2/35 p-2">
-            <div className="uppercase tracking-[0.16em] opacity-70">Atualizado</div>
-            <div className="mt-0.5 font-mono text-foreground/80">20/06/2026 06:05</div>
-          </div>
-          <div className="pt-1 text-[9px] uppercase tracking-[0.18em] opacity-60">
+        <div className="border-t border-border/40 px-3 py-3 text-[10px] text-muted-foreground">
+          <div className="text-[9px] uppercase tracking-[0.18em] opacity-60">
             v1.0 · build 2026.06
           </div>
         </div>
@@ -128,7 +113,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               Expo Center Norte · Análise Operacional
             </div>
           </div>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-3">
             <div className="hidden overflow-hidden rounded-full border border-border bg-surface-2/70 p-0.5 text-[11px] shadow-[inset_0_0_18px_rgba(0,180,255,0.06)] md:flex">
               {[
                 { value: "d1", label: "D-1" },
@@ -149,6 +134,17 @@ export function AppShell({ children }: { children: ReactNode }) {
                   {p.label}
                 </button>
               ))}
+            </div>
+            <div className="hidden items-center gap-3 rounded-full border border-border/60 bg-surface-2/55 px-3 py-1.5 text-[10px] text-muted-foreground shadow-[inset_0_0_16px_rgba(255,255,255,0.03)] xl:flex">
+              <div className="flex items-center gap-1.5">
+                <span className="uppercase tracking-[0.16em] opacity-70">Dados da base</span>
+                <span className="font-mono font-semibold text-foreground/85">19/06/2026 (D-1)</span>
+              </div>
+              <span className="h-4 w-px bg-border/70" />
+              <div className="flex items-center gap-1.5">
+                <span className="uppercase tracking-[0.16em] opacity-70">Atualizado</span>
+                <span className="font-mono font-semibold text-foreground/85">20/06/2026 06:05</span>
+              </div>
             </div>
             <div className="hidden font-mono text-xs text-muted-foreground md:block">{now}</div>
             <div className="grid h-8 w-8 place-items-center rounded-full border border-primary/40 bg-primary/10 text-[11px] font-bold text-primary">
