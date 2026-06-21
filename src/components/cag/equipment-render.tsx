@@ -37,12 +37,12 @@ export function EquipmentRender({
   className?: string;
 }) {
   const p = palette[chillerId];
-  const height = size === "lg" ? "h-[340px]" : size === "sm" ? "h-[120px]" : "h-[154px]";
+  const height = size === "lg" ? "h-[340px]" : size === "sm" ? "h-[115px]" : "h-[142px]";
 
   return (
     <div
       className={cn(
-        "equipment-render group relative w-full overflow-hidden rounded-xl border bg-[#030814]/60",
+        "equipment-render group relative w-full overflow-hidden rounded-xl border bg-[#030814]/45",
         height,
         className,
       )}
@@ -61,16 +61,16 @@ export function EquipmentRender({
       <img
         src="/assets/chiller-render-base.png"
         alt={p.label}
-        className="absolute inset-0 h-full w-full object-contain object-center opacity-95 transition-transform duration-500 group-hover:scale-[1.03]"
+        className="absolute inset-0 h-full w-full object-contain object-center opacity-95 transition-transform duration-500 group-hover:scale-[1.045]"
         style={{ filter: p.filter }}
       />
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-background/95 via-background/28 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-background/95 via-background/28 to-transparent" />
       <div className="pointer-events-none absolute inset-x-8 bottom-4 h-px" style={{ background: p.main, boxShadow: `0 0 16px ${p.main}` }} />
       <div className="pointer-events-none absolute -inset-x-10 top-1/2 h-24 -translate-y-1/2 blur-3xl" style={{ background: p.accent }} />
 
       {highlight !== "none" && (
-        <div className="absolute right-3 top-3 rounded-md border border-status-alert/60 bg-status-alert/15 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-status-alert shadow-[0_0_20px_rgba(255,166,0,.22)]">
+        <div className="absolute right-2 top-2 rounded-md border border-status-alert/60 bg-status-alert/15 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-status-alert shadow-[0_0_20px_rgba(255,166,0,.22)]">
           {highlight === "compressor" ? "Compressor" : highlight === "pump" ? "Bomba" : "Circuito"} em atenção
         </div>
       )}
