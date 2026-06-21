@@ -1,6 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  Activity,
   AlertTriangle,
   BarChart3,
   Bell,
@@ -13,6 +12,7 @@ import {
   Moon,
   Settings,
   Signal,
+  Star,
   Sun,
   Wand2,
   Wifi,
@@ -52,16 +52,27 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const cycleTheme = () => setTheme(theme === "dark" ? "light" : theme === "light" ? "auto" : "dark");
   const ThemeIcon = theme === "dark" ? Moon : theme === "light" ? Sun : Wand2;
+  const [compare, setCompare] = useState("yesterday");
 
   return (
     <div className="flex min-h-screen w-full bg-background text-foreground">
       {/* Sidebar */}
       <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-border/40 bg-sidebar/60 backdrop-blur-xl lg:flex">
-        <div className="border-b border-border/40 px-5 py-5">
-          <div className="font-display text-2xl font-black leading-none tracking-tight text-foreground">★ EXPO</div>
-          <div className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Center Norte</div>
-          <div className="mt-5 text-sm font-bold uppercase leading-tight tracking-[0.12em] text-foreground/90">CAG</div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Centrais de<br />Água Gelada</div>
+        <div className="border-b border-border/40 px-4 py-4">
+          <div className="flex items-center gap-2">
+            <div className="relative grid h-9 w-9 place-items-center rounded-md border border-primary/50 bg-gradient-to-br from-primary/30 to-status-ai/30">
+              <Star className="h-4 w-4 text-primary" />
+              <div className="absolute inset-0 rounded-md ring-1 ring-primary/40" />
+            </div>
+            <div className="leading-tight">
+              <div className="font-display text-[13px] font-bold tracking-[0.18em]">EXPO</div>
+              <div className="text-[9px] uppercase tracking-[0.22em] text-muted-foreground">Center Norte</div>
+            </div>
+          </div>
+          <div className="mt-3 border-t border-border/30 pt-3">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">CAG</div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Centro de Inteligência</div>
+          </div>
         </div>
         <nav className="flex-1 space-y-0.5 px-3 py-4">
           {nav.map((item) => {
@@ -84,11 +95,17 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
-        <div className="border-t border-border/40 p-3 text-[10px] text-muted-foreground">
+        <div className="space-y-1.5 border-t border-border/40 px-3 py-3 text-[10px] text-muted-foreground">
           <div className="flex items-center gap-2">
-            <Wifi className="h-3 w-3 text-status-ok" />
-            <span>n8n · pronto p/ conectar</span>
+            <span className="relative grid h-2 w-2 place-items-center">
+              <span className="absolute inset-0 rounded-full bg-status-ok animate-pulse-glow" />
+              <span className="h-1 w-1 rounded-full bg-status-ok" />
+            </span>
+            <span className="text-status-ok">n8n · conectado</span>
           </div>
+          <div>Última sincronização</div>
+          <div className="font-mono text-foreground/80">{now || "--:--:--"}</div>
+          <div className="pt-1 text-[9px] uppercase tracking-[0.18em] opacity-60">v1.0 · build 2026.06</div>
         </div>
       </aside>
 
@@ -96,21 +113,39 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Header */}
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/40 bg-background/70 px-4 backdrop-blur-xl">
           <div className="hidden md:block">
-            <div className="font-display text-sm font-semibold leading-none">Central de Água Gelada</div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Expo Center Norte · CAG principal e Pavimento Branco</div>
+            <div className="font-display text-sm font-semibold leading-none">Visão Geral da Central</div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Expo Center Norte · Home Analítica</div>
           </div>
           <div className="ml-auto flex items-center gap-2">
-            <div className="relative">
-              <select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value)}
-                className="appearance-none rounded-md border border-border bg-surface-2/60 px-3 py-1.5 pr-7 text-xs font-medium focus:border-primary focus:outline-none"
-              >
-                {periodOptions.map((p) => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <div className="hidden items-center gap-1 rounded-md border border-border bg-surface-2/60 px-2 py-1 text-[10px] md:flex">
+              <span className="text-muted-foreground">Período</span>
+              <div className="relative">
+                <select
+                  value={period}
+                  onChange={(e) => setPeriod(e.target.value)}
+                  className="appearance-none bg-transparent pr-4 text-[11px] font-semibold focus:outline-none"
+                >
+                  {periodOptions.slice(0, 5).map((p) => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              </div>
+            </div>
+            <div className="hidden items-center gap-1 rounded-md border border-border bg-surface-2/60 px-2 py-1 text-[10px] md:flex">
+              <span className="text-muted-foreground">Comparar com</span>
+              <div className="relative">
+                <select
+                  value={compare}
+                  onChange={(e) => setCompare(e.target.value)}
+                  className="appearance-none bg-transparent pr-4 text-[11px] font-semibold focus:outline-none"
+                >
+                  {periodOptions.slice(0, 5).map((p) => (
+                    <option key={p.value} value={p.value}>{p.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+              </div>
             </div>
             <div className="hidden items-center gap-1.5 rounded-md border border-status-ok/40 bg-status-ok/10 px-2.5 py-1 text-[11px] text-status-ok md:flex">
               <Signal className="h-3 w-3 animate-pulse-glow" />

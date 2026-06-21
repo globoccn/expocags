@@ -1,302 +1,350 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
+  AlertCircle,
   AlertTriangle,
-  ArrowDownRight,
-  ArrowUpRight,
+  ArrowRight,
   Brain,
-  CalendarDays,
   CircuitBoard,
   Droplets,
   Gauge,
   Heart,
   Radio,
-  ShieldAlert,
-  Signal,
   Sparkles,
-  Thermometer,
+  Trophy,
   Wifi,
   Zap,
 } from "lucide-react";
-import { KpiCard } from "@/components/cag/kpi-card";
-import { ChillerCard } from "@/components/cag/chiller-card";
+import { HomeChillerCard } from "@/components/cag/home-chiller-card";
+import { KpiSparkCard } from "@/components/cag/kpi-spark";
+import { Sparkline } from "@/components/cag/sparkline";
 import { SeverityBadge } from "@/components/cag/badges";
-import { chillers, plant, events, aiInsights, chillerTheme, type ChillerId } from "@/data/mockCagData";
+import {
+  chillers,
+  comparatives,
+  correlations,
+  headerKpis,
+  homeIntel,
+  homeTimeline,
+  ranking,
+  chillerTheme,
+} from "@/data/mockCagData";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Visão Geral — CAG Intelligence AI" },
-      { name: "description", content: "Home analítica da Central de Água Gelada com IA." },
+      { name: "description", content: "Cockpit de operação da Central de Água Gelada com IA." },
       { property: "og:title", content: "Visão Geral — CAG Intelligence AI" },
-      { property: "og:description", content: "Home analítica da Central de Água Gelada com IA." },
+      { property: "og:description", content: "Cockpit de operação da Central de Água Gelada com IA." },
     ],
   }),
   component: Index,
 });
 
-type Tone = "ok" | "info" | "warn" | "alert" | "crit" | "ai";
+const iconForKpi: Record<string, any> = {
+  health: Heart,
+  deltaT: Activity,
+  bypass: Gauge,
+  online: CircuitBoard,
+  pumps: Droplets,
+  comps: Zap,
+  events: AlertCircle,
+  comm: Wifi,
+};
 
-const toneClass: Record<Tone, string> = {
+const toneText: Record<string, string> = {
   ok: "text-status-ok",
   info: "text-status-info",
   warn: "text-status-warn",
   alert: "text-status-alert",
   crit: "text-status-crit",
   ai: "text-status-ai",
+  default: "text-foreground",
 };
 
-function avg(values: number[]) {
-  return +(values.reduce((a, b) => a + b, 0) / values.length).toFixed(1);
-}
+const toneBg: Record<string, string> = {
+  ok: "bg-status-ok/15 border-status-ok/40 text-status-ok",
+  info: "bg-status-info/15 border-status-info/40 text-status-info",
+  warn: "bg-status-warn/15 border-status-warn/40 text-status-warn",
+  alert: "bg-status-alert/15 border-status-alert/40 text-status-alert",
+  crit: "bg-status-crit/15 border-status-crit/40 text-status-crit",
+  ai: "bg-status-ai/15 border-status-ai/40 text-status-ai",
+};
 
-function TinySpark({ tone = "info" }: { tone?: Tone }) {
-  const cls = toneClass[tone];
-  return (
-    <svg viewBox="0 0 120 36" className="h-8 w-full opacity-75" preserveAspectRatio="none">
-      <path d="M0,28 C14,22 18,30 31,23 C47,13 50,29 66,18 C83,6 92,22 120,10" fill="none" stroke="currentColor" strokeWidth="2" className={cls} />
-      <path d="M0,28 C14,22 18,30 31,23 C47,13 50,29 66,18 C83,6 92,22 120,10 L120,36 L0,36 Z" fill="currentColor" className={cls} opacity="0.08" />
-    </svg>
-  );
-}
+const temporalMatrix = [
+  { metric: "Delta T médio", today: "4.4°C", yesterday: "4.9°C", week: "5.1°C", month: "5.0°C", trend: "↓ 18%", tone: "alert" },
+  { metric: "Bypass médio", today: "34%", yesterday: "24%", week: "22%", month: "20%", trend: "↑ 42%", tone: "alert" },
+  { metric: "Capacidade média", today: "75%", yesterday: "69%", week: "65%", month: "61%", trend: "↑ 16%", tone: "info" },
+  { metric: "Saúde da Central", today: "81", yesterday: "85", week: "87", month: "88", trend: "↓ 6 pts", tone: "warn" },
+  { metric: "Partidas", today: "187", yesterday: "153", week: "132", month: "118", trend: "↑ 38%", tone: "alert" },
+  { metric: "Alarmes", today: "4", yesterday: "2", week: "1.4", month: "1.1", trend: "↑ 2", tone: "warn" },
+] as const;
 
-function ChangeMetric({ label, value, unit, change, tone, icon: Icon }: { label: string; value: string | number; unit?: string; change: string; tone: Tone; icon?: LucideIcon }) {
-  const down = change.includes("↓") || change.includes("-");
-  return (
-    <div className="rounded-xl border border-border/30 bg-background/35 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{label}</div>
-        {Icon && <Icon className={`h-3.5 w-3.5 ${toneClass[tone]}`} />}
-      </div>
-      <div className="flex items-end justify-between gap-2">
-        <div className={`font-display text-2xl font-bold leading-none tabular-nums ${toneClass[tone]}`}>{value}<span className="ml-1 text-xs text-muted-foreground">{unit}</span></div>
-        <div className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${down ? "border-status-crit/35 bg-status-crit/10 text-status-crit" : "border-status-ok/35 bg-status-ok/10 text-status-ok"}`}>{change}</div>
-      </div>
-      <div className="mt-2"><TinySpark tone={tone} /></div>
-    </div>
-  );
-}
+const decisionCards = [
+  { label: "O que piorou?", value: "Bypass + Delta T", desc: "Chiller Vermelho saiu do padrão semanal", tone: "alert" },
+  { label: "Possível causa", value: "Recirculação", desc: "Bypass elevado associado à baixa troca térmica", tone: "ai" },
+  { label: "Onde agir primeiro", value: "Bombas / Bypass", desc: "Verificar válvula bypass e modo das bombas", tone: "warn" },
+  { label: "Impacto estimado", value: "Eficiência ↓", desc: "Operação térmica menos eficiente no período", tone: "alert" },
+] as const;
 
-function ChangedPeriodPanel() {
-  const avgDelta = avg(chillers.map((c) => c.deltaT));
-  const avgBypass = avg(chillers.map((c) => c.hydraulic.bypassValve));
-  const avgCap = avg(chillers.map((c) => c.capacityTotal));
-  const avgError = avg(chillers.map((c) => c.feedTemp - c.setpoint));
+function Index() {
   return (
-    <section className="glass-card p-4">
-      <div className="mb-3 flex items-end justify-between gap-3">
+    <div className="space-y-5">
+      {/* Page title bar */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h3 className="font-display text-base font-bold uppercase tracking-wide">O que mudou no período</h3>
-          <p className="text-[11px] text-muted-foreground">Comparação executiva: hoje × ontem × média de 7 dias.</p>
-        </div>
-        <button className="text-[11px] font-semibold text-primary hover:text-glow">Ver todos</button>
-      </div>
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4 xl:grid-cols-7">
-        <ChangeMetric label="Saúde Geral" value={plant.summary.healthScore} unit="/100" change="↓ 4 pts" tone="warn" icon={Heart} />
-        <ChangeMetric label="ΔT médio" value={avgDelta} unit="°C" change="↓ 18%" tone="crit" icon={Thermometer} />
-        <ChangeMetric label="Bypass médio" value={avgBypass} unit="%" change="↑ 42%" tone="alert" icon={Droplets} />
-        <ChangeMetric label="Capacidade média" value={avgCap} unit="%" change="↑ 16%" tone="info" icon={Gauge} />
-        <ChangeMetric label="Erro Setpoint" value={`+${avgError}`} unit="°C" change="↑ 100%" tone="crit" icon={ArrowUpRight} />
-        <ChangeMetric label="Pressão linha" value="6.2" unit="bar" change="↓ 8%" tone="info" icon={ArrowDownRight} />
-        <ChangeMetric label="Temp. externa" value="31.5" unit="°C" change="↑ 4°C" tone="info" icon={CalendarDays} />
-      </div>
-    </section>
-  );
-}
-
-function RankingPanel() {
-  const ordered = [...chillers].sort((a, b) => b.healthScore - a.healthScore);
-  return (
-    <section className="glass-card p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <h3 className="font-display text-base font-bold uppercase tracking-wide">Ranking Operacional</h3>
-          <p className="text-[11px] text-muted-foreground">Por saúde dos chillers</p>
-        </div>
-        <button className="text-[11px] font-semibold text-primary">Ver todos</button>
-      </div>
-      <div className="space-y-3">
-        {ordered.map((c, idx) => {
-          const theme = chillerTheme[c.id];
-          return (
-            <div key={c.id} className="grid grid-cols-[24px_1fr_54px] items-center gap-3">
-              <div className={`font-display text-lg font-bold ${idx === 0 ? "text-status-alert" : idx === 1 ? "text-chiller-white" : "text-chiller-red"}`}>{idx + 1}</div>
-              <div>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="font-semibold" style={{ color: theme.hex }}>{c.name}</span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-background/55 ring-1 ring-border/20">
-                  <div className="h-full rounded-full" style={{ width: `${c.healthScore}%`, background: theme.hex, boxShadow: `0 0 16px ${theme.hex}` }} />
-                </div>
-              </div>
-              <div className="text-right font-mono text-sm font-bold tabular-nums">{c.healthScore}<span className="text-[10px] text-muted-foreground">/100</span></div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function IntelligencePanel() {
-  const topInsight = aiInsights[0];
-  return (
-    <div className="glass-card relative overflow-hidden p-4">
-      <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-status-ai/25 blur-3xl" />
-      <div className="relative">
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-status-ai/20 text-status-ai shadow-[0_0_26px_rgba(180,80,255,.28)]"><Brain className="h-5 w-5" /></div>
-            <div>
-              <div className="text-[10px] font-bold uppercase tracking-[0.26em] text-muted-foreground">Centro de Inteligência</div>
-              <h3 className="font-display text-lg font-bold">Recomendação IA</h3>
-            </div>
+          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+            <Radio className="h-3 w-3 text-status-ok animate-pulse-glow" /> Cockpit Operacional · Tempo Real
           </div>
-          <SeverityBadge severity="alert" />
+          <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">
+            Visão Geral da <span className="text-primary text-glow">Central</span>
+          </h1>
+          <p className="text-xs text-muted-foreground">Expo Center Norte · Centro de Inteligência Operacional</p>
         </div>
-        <p className="text-sm leading-relaxed text-foreground/90">
-          O <span style={{ color: chillerTheme.red.hex }} className="font-semibold text-glow">Chiller Vermelho</span> concentra a maior carga, possui queda de Delta T frente à média semanal e bypass acima do padrão. O padrão sugere recirculação hidráulica ou baixa troca térmica efetiva.
-        </p>
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          <InfoBox label="Equipamento" value={topInsight.equipment} color={chillerTheme.red.hex} />
-          <InfoBox label="Confiança" value="92%" color="var(--status-ai)" big />
-          <InfoBox label="Causa provável" value="Recirculação hidráulica" />
-          <InfoBox label="Impacto" value="Eficiência reduzida" color="var(--status-warn)" />
-        </div>
-        <div className="mt-4 rounded-xl border border-status-ai/35 bg-status-ai/10 p-3">
-          <div className="flex items-center gap-2 text-xs font-bold uppercase text-status-ai"><Sparkles className="h-3.5 w-3.5" /> Ação sugerida</div>
-          <p className="mt-2 text-sm leading-relaxed">Inspecionar válvula bypass, balanceamento hidráulico e operação das bombas.</p>
+        <div className="flex items-center gap-2">
+          <SeverityBadge severity={homeIntel.status} />
+          <span className="hidden text-[10px] text-muted-foreground md:inline">Atualizado em tempo real</span>
         </div>
       </div>
-    </div>
-  );
-}
 
-function InfoBox({ label, value, color, big }: { label: string; value: string; color?: string; big?: boolean }) {
-  return (
-    <div className="rounded-xl border border-border/35 bg-background/30 p-3">
-      <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
-      <div className={`mt-1 font-display font-bold leading-tight ${big ? "text-xl" : "text-sm"}`} style={{ color }}>{value}</div>
-    </div>
-  );
-}
-
-function TrendsPanel() {
-  const eventColor = (id: ChillerId) => chillerTheme[id].hex;
-  return (
-    <div className="glass-card p-4">
-      <div className="mb-3 flex items-center justify-between">
-        <h3 className="font-display text-base font-bold uppercase tracking-wide">Tendências (últimas 6 horas)</h3>
-        <button className="text-[11px] font-semibold text-primary">Ver todos</button>
+      {/* Header KPIs */}
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8">
+        {headerKpis.map((k) => (
+          <KpiSparkCard key={k.key} kpi={k} icon={iconForKpi[k.key]} />
+        ))}
       </div>
-      <div className="space-y-3">
-        {events.slice(0, 5).map((e, i) => (
-          <div key={e.id} className="grid grid-cols-[12px_46px_1fr_70px] items-center gap-2">
-            <div className="h-2.5 w-2.5 rounded-full" style={{ background: eventColor(e.chiller), boxShadow: `0 0 10px ${eventColor(e.chiller)}` }} />
-            <div className="font-mono text-[11px] text-muted-foreground">{e.time}</div>
-            <div className="min-w-0">
-              <div className="truncate text-[11px] text-muted-foreground">{chillerTheme[e.chiller].label}</div>
-              <div className="truncate text-xs font-semibold">{e.text}</div>
-            </div>
-            <TinySpark tone={i % 2 === 0 ? "info" : e.chiller === "red" ? "crit" : "warn"} />
+
+      {/* Decision layer */}
+      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
+        {decisionCards.map((card) => (
+          <div key={card.label} className={cn("glass-card relative overflow-hidden p-3", toneBg[card.tone].replace(/text-\S+/, ""))}>
+            <div className={cn("text-[9px] font-semibold uppercase tracking-[0.22em]", toneText[card.tone])}>{card.label}</div>
+            <div className="mt-1 font-display text-lg font-bold leading-tight">{card.value}</div>
+            <div className="mt-1 text-[11px] leading-snug text-muted-foreground">{card.desc}</div>
+            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-current to-transparent opacity-25" />
           </div>
         ))}
       </div>
-    </div>
-  );
-}
 
-function CorrelationCard({ title, subtitle, impact, chiller, tone }: { title: string; subtitle: string; impact: string; chiller: string; tone: Tone }) {
-  return (
-    <div className={`rounded-2xl border bg-background/28 p-4 ${tone === "crit" ? "border-status-crit/35" : tone === "alert" ? "border-status-alert/35" : "border-border/30"}`}>
-      <h4 className={`font-display text-sm font-bold uppercase tracking-wide ${toneClass[tone]}`}>{title}</h4>
-      <p className="mt-2 text-sm text-muted-foreground">{subtitle}</p>
-      <div className="mt-2 text-xs"><span className="text-muted-foreground">Impacto: </span><span className={`font-bold ${toneClass[tone]}`}>{impact}</span></div>
-      <div className="mt-2 font-display text-sm font-bold" style={{ color: chiller.includes("Vermelho") ? chillerTheme.red.hex : chiller.includes("Branco") ? chillerTheme.white.hex : chillerTheme.blue.hex }}>{chiller}</div>
-    </div>
-  );
-}
-
-function CorrelationsPanel() {
-  return (
-    <section className="glass-card p-4">
-      <div className="mb-3 flex items-center gap-4">
-        <h3 className="font-display text-base font-bold uppercase tracking-wide">Correlações Inteligentes</h3>
-        <p className="text-[11px] text-muted-foreground">Relações que mais impactam a operação no período</p>
-      </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <CorrelationCard title="ΔT baixo + bypass alto" subtitle="Risco de recirculação hidráulica" impact="Alto" chiller="Chiller Vermelho" tone="crit" />
-        <CorrelationCard title="Temp. externa alta + carga alta" subtitle="Comportamento dentro do esperado" impact="Médio" chiller="Central" tone="ok" />
-        <CorrelationCard title="Erro setpoint + carga alta" subtitle="Consumo energético elevado" impact="Alto" chiller="Chiller Vermelho" tone="crit" />
-        <CorrelationCard title="Pressão abaixo do setpoint" subtitle="Risco de vazão insuficiente" impact="Médio" chiller="Bombas" tone="info" />
-        <CorrelationCard title="Muitas partidas + baixa carga" subtitle="Desgaste mecânico elevado" impact="Médio" chiller="Chiller Branco" tone="warn" />
-      </div>
-    </section>
-  );
-}
-
-function Index() {
-  const s = plant.summary;
-  const pumpsWithAttention = chillers.flatMap((c) => c.pumps).filter((p) => p.alarm || p.mode === "local" || p.status === "fault" || p.pressureError < -0.3).length;
-  const avgDelta = avg(chillers.map((c) => c.deltaT));
-  const avgBypass = avg(chillers.map((c) => c.hydraulic.bypassValve));
-
-  return (
-    <div className="home-v7 mx-auto max-w-[1920px] space-y-3.5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      {/* Chillers + AI panel */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div>
-          <h1 className="font-display text-3xl font-bold uppercase tracking-[0.02em] text-glow md:text-4xl">Visão Geral da Central</h1>
-          <div className="mt-1 text-[12px] font-semibold uppercase tracking-[0.22em] text-primary/85">Expo Center Norte • Home Analítica</div>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="hidden rounded-xl border border-border/35 bg-background/35 px-4 py-2 md:block">
-            <div className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Período</div>
-            <div className="text-sm font-semibold">Hoje</div>
-          </div>
-          <div className="hidden rounded-xl border border-border/35 bg-background/35 px-4 py-2 md:block">
-            <div className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Comparar com</div>
-            <div className="text-sm font-semibold">Ontem</div>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-status-ok/35 bg-status-ok/10 px-4 py-2 text-status-ok"><Signal className="h-4 w-4" /> <span className="text-sm font-bold">ONLINE</span></div>
-          <div className="hidden font-mono text-sm text-muted-foreground md:block">22:47:03</div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
-        <KpiCard label="Saúde Geral" value={s.healthScore} unit="/100" icon={Heart} tone="warn" trend="↓ 4 pts vs ontem" />
-        <KpiCard label="Delta T Médio" value={avgDelta} unit="°C" icon={Thermometer} tone="info" trend="↓ 18% vs média 7d" />
-        <KpiCard label="Bypass Médio" value={avgBypass} unit="%" icon={Droplets} tone="info" trend="↑ 42% vs média 7d" />
-        <KpiCard label="Chillers Online" value="2/3" icon={CircuitBoard} tone="info" trend="1 em manutenção" />
-        <KpiCard label="Bombas Atenção" value={pumpsWithAttention} icon={Droplets} tone="alert" trend="2 alarmes ativos" />
-        <KpiCard label="Compressores" value={`${s.compressorsOn}/12`} icon={Zap} tone="info" trend="75% em operação" />
-        <KpiCard label="Comunicação" value="Online" icon={Wifi} tone="ok" trend="n8n / SCADA" />
-      </div>
-
-      <div className="grid gap-3 2xl:grid-cols-[1fr_350px]">
-        <section className="glass-card p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-2 flex items-end justify-between">
             <div>
-              <h2 className="font-display text-xl font-bold uppercase tracking-wide">Chillers da Central</h2>
-              <p className="text-xs text-muted-foreground">Clique em um chiller para abrir o cockpit detalhado</p>
+              <h2 className="font-display text-base font-semibold tracking-wide">CHILLERS DA CENTRAL</h2>
+              <p className="text-[11px] text-muted-foreground">Clique em um chiller para abrir o cockpit detalhado</p>
+            </div>
+            <div className="hidden gap-3 text-[10px] text-muted-foreground md:flex">
+              <span>3 unidades</span>
+              <span>·</span>
+              <span>6 circuitos</span>
+              <span>·</span>
+              <span>12 bombas</span>
             </div>
           </div>
-          <div className="grid gap-3 xl:grid-cols-3">
-            {chillers.map((c) => <ChillerCard key={c.id} chiller={c} />)}
+          <div className="grid gap-3 lg:grid-cols-3">
+            {chillers.map((c) => <HomeChillerCard key={c.id} chiller={c} />)}
           </div>
-        </section>
+        </div>
 
-        <aside className="space-y-3">
-          <IntelligencePanel />
-          <TrendsPanel />
+        {/* AI Intelligence panel */}
+        <aside className="glass-card relative flex flex-col overflow-hidden p-4">
+          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-status-ai/20 blur-3xl" />
+          <div className="relative">
+            <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Centro de Inteligência</div>
+            <div className="mt-1 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="grid h-8 w-8 place-items-center rounded-md border border-status-ai/40 bg-status-ai/15 text-status-ai">
+                  <Brain className="h-4 w-4" />
+                </div>
+                <h3 className="font-display text-base font-bold">Recomendação IA</h3>
+              </div>
+              <span className="inline-flex items-center gap-1 rounded-full border border-status-alert/40 bg-status-alert/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-status-alert">
+                <AlertTriangle className="h-3 w-3" /> Alerta
+              </span>
+            </div>
+
+            <p className="mt-3 text-[12px] leading-relaxed text-foreground/90">
+              O <span className="font-semibold" style={{ color: chillerTheme.red.hex }}>Chiller Vermelho</span> concentra a maior carga, possui queda de Δ T frente à média semanal e bypass acima do padrão. O padrão sugere recirculação hidráulica ou baixa troca térmica efetiva.
+            </p>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-md border border-border/50 bg-surface-2/40 p-2">
+                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Equipamento</div>
+                <div className="mt-0.5 text-[11px] font-semibold" style={{ color: chillerTheme.red.hex }}>{homeIntel.equipamento}</div>
+              </div>
+              <div className="rounded-md border border-border/50 bg-surface-2/40 p-2">
+                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Confiança</div>
+                <div className="mt-0.5 font-display text-base font-bold text-status-ai">{homeIntel.confianca}%</div>
+              </div>
+              <div className="rounded-md border border-border/50 bg-surface-2/40 p-2">
+                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Causa provável</div>
+                <div className="mt-0.5 text-[11px] font-semibold text-status-alert">{homeIntel.causa}</div>
+              </div>
+              <div className="rounded-md border border-border/50 bg-surface-2/40 p-2">
+                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Impacto</div>
+                <div className="mt-0.5 text-[11px] font-semibold text-status-alert">{homeIntel.impacto}</div>
+              </div>
+            </div>
+
+            <div className="mt-3 rounded-md border border-status-ai/30 bg-status-ai/5 p-2.5">
+              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-status-ai">
+                <Sparkles className="h-3 w-3" /> Ação sugerida
+              </div>
+              <p className="mt-1 text-[12px] leading-snug">{homeIntel.acao}</p>
+            </div>
+
+            <button className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-primary transition hover:bg-primary/20">
+              Abrir Análise IA <ArrowRight className="h-3 w-3" />
+            </button>
+          </div>
+
+          {/* Timeline preview */}
+          <div className="relative mt-4 border-t border-border/40 pt-3">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">Tendências (últimas 6h)</div>
+              <button className="text-[10px] text-muted-foreground hover:text-foreground">Ver todos</button>
+            </div>
+            <ul className="space-y-2">
+              {homeTimeline.slice(0, 5).map((t) => (
+                <li key={t.id} className="flex items-center gap-2">
+                  <div className="font-mono text-[10px] text-muted-foreground">{t.time}</div>
+                  <div className="flex-1 leading-tight">
+                    <div className={cn("text-[11px] font-semibold", toneText[t.tone])}>{t.title}</div>
+                    <div className="text-[10px] text-muted-foreground">{t.desc}</div>
+                  </div>
+                  <div className="h-7 w-16">
+                    <Sparkline data={t.spark} tone={t.tone} height={28} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         </aside>
       </div>
 
-      <div className="grid gap-3 2xl:grid-cols-[1.4fr_1fr]">
-        <ChangedPeriodPanel />
-        <RankingPanel />
+      {/* Comparativos + Ranking */}
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <section className="glass-card p-4">
+          <div className="mb-3 flex items-end justify-between">
+            <div>
+              <h3 className="font-display text-sm font-bold uppercase tracking-wider">O que mudou no período</h3>
+              <p className="text-[10px] text-muted-foreground">Comparação executiva · Hoje × Ontem × 7 dias</p>
+            </div>
+            <button className="text-[10px] text-muted-foreground hover:text-foreground">Ver todos →</button>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+            {comparatives.map((c) => (
+              <div key={c.key} className="rounded-md border border-border/40 bg-surface-2/30 p-2.5 transition hover:border-primary/40">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{c.label}</div>
+                <div className="mt-1 flex items-baseline gap-1">
+                  <span className={cn("font-display text-xl font-bold tabular-nums", toneText[c.tone])}>{c.value}</span>
+                  {c.unit ? <span className="text-[10px] text-muted-foreground">{c.unit}</span> : null}
+                </div>
+                <div className="mt-0.5 flex items-center justify-between text-[9px]">
+                  <span className={cn(c.d1.trend === "up" ? "text-status-alert" : c.d1.trend === "down" ? "text-status-info" : "text-muted-foreground")}>
+                    {c.d1.delta} <span className="text-muted-foreground">{c.d1.label}</span>
+                  </span>
+                  <span className={cn(c.d7.trend === "up" ? "text-status-alert" : c.d7.trend === "down" ? "text-status-info" : "text-muted-foreground")}>
+                    {c.d7.delta} <span className="text-muted-foreground">{c.d7.label}</span>
+                  </span>
+                </div>
+                <div className="-mx-1 mt-1">
+                  <Sparkline data={c.spark} tone={c.tone} height={26} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="glass-card p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <div>
+              <h3 className="font-display text-sm font-bold uppercase tracking-wider">Ranking Operacional</h3>
+              <p className="text-[10px] text-muted-foreground">Por saúde · capacidade · eficiência</p>
+            </div>
+            <Trophy className="h-4 w-4 text-status-warn" />
+          </div>
+          <ol className="space-y-2">
+            {ranking.map((r) => {
+              const t = chillerTheme[r.chiller];
+              const medal = r.pos === 1 ? "text-status-warn" : r.pos === 2 ? "text-foreground/80" : "text-status-alert";
+              return (
+                <li key={r.pos} className="rounded-md border border-border/40 bg-surface-2/30 p-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className={cn("font-display text-xl font-bold", medal)}>{r.pos}°</div>
+                    <div className="flex-1">
+                      <div className="font-display text-sm font-semibold" style={{ color: t.hex }}>{r.name}</div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-border/40">
+                        <div className="h-full rounded-full" style={{ width: `${r.score}%`, background: t.hex, boxShadow: `0 0 8px ${t.hex}` }} />
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-display text-base font-bold tabular-nums" style={{ color: t.hex }}>{r.score}<span className="text-[10px] text-muted-foreground">/100</span></div>
+                      <div className="text-[9px] text-muted-foreground">Cap. {r.capacity}% · Ef. {r.efficiency}%</div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </section>
       </div>
 
-      <CorrelationsPanel />
+      {/* Comparativos temporais */}
+      <section className="glass-card p-4">
+        <div className="mb-3 flex items-end justify-between">
+          <div>
+            <h3 className="font-display text-sm font-bold uppercase tracking-wider">Comparativos Temporais</h3>
+            <p className="text-[10px] text-muted-foreground">Hoje × Ontem × Média 7 dias × Média 30 dias · preparado para JSON do n8n</p>
+          </div>
+          <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">Análise executiva</span>
+        </div>
+        <div className="overflow-hidden rounded-lg border border-border/35">
+          <div className="grid grid-cols-[1.4fr_repeat(5,0.8fr)] bg-surface-2/45 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            <div>Métrica</div><div>Hoje</div><div>Ontem</div><div>7 dias</div><div>30 dias</div><div>Tendência</div>
+          </div>
+          {temporalMatrix.map((row) => (
+            <div key={row.metric} className="grid grid-cols-[1.4fr_repeat(5,0.8fr)] border-t border-border/30 px-3 py-2 text-[12px]">
+              <div className="font-semibold text-foreground/90">{row.metric}</div>
+              <div className={cn("font-mono font-semibold", toneText[row.tone])}>{row.today}</div>
+              <div className="font-mono text-muted-foreground">{row.yesterday}</div>
+              <div className="font-mono text-muted-foreground">{row.week}</div>
+              <div className="font-mono text-muted-foreground">{row.month}</div>
+              <div className={cn("font-mono font-semibold", toneText[row.tone])}>{row.trend}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Correlações inteligentes */}
+      <section className="glass-card p-4">
+        <div className="mb-3 flex items-end justify-between">
+          <div>
+            <h3 className="font-display text-sm font-bold uppercase tracking-wider">Correlações Inteligentes</h3>
+            <p className="text-[10px] text-muted-foreground">Relações que mais impactam a operação no período</p>
+          </div>
+          <span className="hidden rounded-full border border-status-ai/40 bg-status-ai/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-status-ai md:inline-flex">
+            5 padrões detectados
+          </span>
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          {correlations.map((c) => (
+            <div key={c.key} className={cn("rounded-md border bg-surface-2/30 p-2.5 transition hover:translate-y-[-2px]", toneBg[c.tone].replace(/text-\S+/, ""))}>
+              <div className={cn("text-[10px] font-semibold uppercase tracking-wider", toneText[c.tone])}>{c.title}</div>
+              <p className="mt-1 text-[11px] leading-snug text-foreground/85">{c.desc}</p>
+              <div className="mt-2 flex items-center justify-between text-[9px]">
+                <span className="text-muted-foreground">
+                  Impacto: <span className={cn("font-semibold", toneText[c.tone])}>{c.impact}</span>
+                </span>
+                <span className="text-muted-foreground">{c.scope}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
