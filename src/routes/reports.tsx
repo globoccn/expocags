@@ -42,8 +42,18 @@ const WATER_METERS: WaterMeter[] = [
   { id: "centro_de_convencoes", label: "Centro de Convenções", waterType: "Água Potável" },
 ];
 
+const DEFAULT_N8N_WEBHOOK_BASE_URL = "https://ancar-n8n.gpfgqx.easypanel.host/webhook";
+
+function joinUrl(base: string, path: string) {
+  return `${base.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
+}
+
+const N8N_WEBHOOK_BASE_URL =
+  import.meta.env.VITE_N8N_WEBHOOK_BASE_URL || DEFAULT_N8N_WEBHOOK_BASE_URL;
+
 const WEBHOOK_URL =
-  import.meta.env.VITE_AGUA_DEMONSTRATIVO_URL || "/webhook/agua-ai/demonstrativo";
+  import.meta.env.VITE_AGUA_DEMONSTRATIVO_URL ||
+  joinUrl(N8N_WEBHOOK_BASE_URL, "agua-ai/demonstrativo");
 
 function moneyInputToNumber(value: string) {
   const normalized = String(value || "")
@@ -133,11 +143,39 @@ function ReportsPage() {
     try {
       const response = await fetch(WEBHOOK_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, application/pdf",
+        },
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type") || "";
+
+      if (contentType.includes("application/pdf")) {
+        const blob = await response.blob();
+        const filename =
+          response.headers
+            .get("content-disposition")
+            ?.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i)
+            ?.slice(1)
+            .find(Boolean);
+        downloadBlob(blob, filename ? decodeURIComponent(filename) : "demonstrativo-agua.pdf");
+        setMessage({ type: "success", text: "Demonstrativo gerado e download iniciado." });
+        return;
+      }
+
+      const responseText = await response.text();
+      let data: any = null;
+
+      try {
+        data = responseText ? JSON.parse(responseText) : null;
+      } catch {
+        const preview = responseText.trim().slice(0, 160);
+        throw new Error(
+          `O endpoint não retornou JSON/PDF. Verifique a URL configurada: ${WEBHOOK_URL}. Resposta: ${preview}`,
+        );
+      }
 
       if (!response.ok || data?.success === false) {
         throw new Error(data?.resposta || data?.error || "Não foi possível gerar o demonstrativo.");
