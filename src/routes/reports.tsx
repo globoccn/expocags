@@ -211,8 +211,8 @@ function ReportsPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-        <section className="glass-card p-5">
+      <div>
+        <section className="glass-card p-6 xl:p-7">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 text-primary">
@@ -227,8 +227,8 @@ function ReportsPage() {
             <FileText className="h-5 w-5 text-muted-foreground" />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="space-y-1.5 md:col-span-2">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <label className="space-y-1.5 md:col-span-2 xl:col-span-2">
               <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Hidrômetro</span>
               <select
                 value={localId}
@@ -243,7 +243,7 @@ function ReportsPage() {
               </select>
             </label>
 
-            <div className="rounded-lg border border-border/70 bg-muted/20 p-3 md:col-span-2">
+            <div className="rounded-lg border border-border/70 bg-muted/20 p-3 md:col-span-2 xl:col-span-2">
               <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Tipo da água</div>
               <div className="mt-1 font-semibold">{selectedMeter.waterType}</div>
             </div>
@@ -337,23 +337,6 @@ function ReportsPage() {
             </button>
           </div>
         </section>
-
-        <aside className="glass-card p-5">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Prévia do envio</div>
-          <h3 className="mt-2 font-display text-lg font-semibold">Contrato com o n8n</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Este é o payload que será enviado para o workflow Água AI 06.
-          </p>
-
-          <div className="mt-4 rounded-lg border border-border/70 bg-black/20 p-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
-            <pre className="overflow-auto whitespace-pre-wrap">{JSON.stringify(payload, null, 2)}</pre>
-          </div>
-
-          <div className="mt-4 rounded-lg border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
-            <div className="font-semibold text-foreground">Endpoint configurado</div>
-            <div className="mt-1 break-all font-mono">{WEBHOOK_URL}</div>
-          </div>
-        </aside>
       </div>
     </div>
   );
