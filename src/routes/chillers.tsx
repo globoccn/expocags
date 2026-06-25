@@ -31,6 +31,7 @@ export const Route = createFileRoute("/chillers")({
 });
 
 type PeriodKey = "d1" | "week" | "month";
+type TrendContext = "water" | "capacity" | "pressure";
 
 const periodOptions: Array<{ key: PeriodKey; label: string; date: string }> = [
   { key: "d1", label: "D-1", date: "19/06/2026" },
@@ -98,23 +99,101 @@ function circuitSummary(chiller: ChillerData, circuitId: "A" | "B") {
   };
 }
 
-function buildTrendData(chiller: ChillerData) {
-  return chiller.series.deltaT.map((point, index) => ({
-    t: point.t,
-    deltaT: point.v,
-    saida: chiller.series.feedReturnSetpoint[index]?.feed ?? chiller.feedTemp,
-    setpoint: chiller.setpoint,
-    capacidade: chiller.series.capacity[index]?.total ?? chiller.capacityTotal,
-  }));
+function periodPointCount(period: PeriodKey) {
+  if (period === "d1") return 24;
+  if (period === "week") return 7;
+  return 30;
+}
+
+function periodTickLabel(period: PeriodKey, index: number) {
+  if (period === "d1") return `${String(index).padStart(2, "0")}h`;
+  if (period === "week") return [`D-6`, `D-5`, `D-4`, `D-3`, `D-2`, `D-1`, `Hoje`][index] || `D-${6 - index}`;
+  return `${String(index + 1).padStart(2, "0")}/06`;
+}
+
+function sampleSeries<T>(series: T[], index: number, total: number) {
+  if (!series.length) return null;
+  if (total <= 1) return series[0];
+  const sourceIndex = Math.round((index / (total - 1)) * (series.length - 1));
+  return series[Math.min(series.length - 1, Math.max(0, sourceIndex))];
+}
+
+function buildTrendData(chiller: ChillerData, period: PeriodKey) {
+  const total = periodPointCount(period);
+  return Array.from({ length: total }, (_, index) => {
+    const water = sampleSeries(chiller.series.feedReturnSetpoint, index, total);
+    const delta = sampleSeries(chiller.series.deltaT, index, total);
+    const capacity = sampleSeries(chiller.series.capacity, index, total);
+    const high = sampleSeries(chiller.series.pressureHigh, index, total);
+    const low = sampleSeries(chiller.series.pressureLow, index, total);
+    const smoothing = period === "d1" ? 1 : period === "week" ? 0.72 : 0.52;
+    const wave = Math.sin(index / (period === "month" ? 3.4 : 1.7));
+
+    return {
+      t: periodTickLabel(period, index),
+      entrada: Number(((water?.ret ?? chiller.returnTemp) + wave * 0.18 * smoothing).toFixed(2)),
+      saida: Number(((water?.feed ?? chiller.feedTemp) + wave * 0.12 * smoothing).toFixed(2)),
+      setpoint: chiller.setpoint,
+      deltaT: Number(((delta?.v ?? chiller.deltaT) + wave * 0.08 * smoothing).toFixed(2)),
+      capacidadeA: Number(((capacity?.a ?? chiller.capacityA) + wave * 2.2 * smoothing).toFixed(1)),
+      capacidadeB: Number(((capacity?.b ?? chiller.capacityB) - wave * 1.7 * smoothing).toFixed(1)),
+      succaoA: Math.round((low?.a ?? 4.8) * 50),
+      succaoB: Math.round((low?.b ?? 4.7) * 50),
+      descargaA: Math.round((high?.a ?? 16.2) * 50),
+      descargaB: Math.round((high?.b ?? 16.0) * 50),
+    };
+  });
+}
+
+const trendContexts: Record<TrendContext, { label: string; unit: string; subtitle: string; lines: Array<{ key: string; label: string; color: string; dashed?: boolean }> }> = {
+  water: {
+    label: "Água Gelada",
+    unit: "°C",
+    subtitle: "Entrada, saída, setpoint e Delta T",
+    lines: [
+      { key: "entrada", label: "Entrada", color: "#60a5fa" },
+      { key: "saida", label: "Saída", color: "#38bdf8" },
+      { key: "setpoint", label: "Setpoint", color: "#4ade80", dashed: true },
+      { key: "deltaT", label: "Delta T", color: "#fb7185" },
+    ],
+  },
+  capacity: {
+    label: "Capacidade",
+    unit: "%",
+    subtitle: "Capacidade média dos circuitos A e B",
+    lines: [
+      { key: "capacidadeA", label: "Circuito A", color: "#38bdf8" },
+      { key: "capacidadeB", label: "Circuito B", color: "#a78bfa" },
+    ],
+  },
+  pressure: {
+    label: "Pressões",
+    unit: "psi",
+    subtitle: "Sucção e descarga por circuito",
+    lines: [
+      { key: "succaoA", label: "Sucção A", color: "#22c55e" },
+      { key: "succaoB", label: "Sucção B", color: "#84cc16" },
+      { key: "descargaA", label: "Descarga A", color: "#fb7185" },
+      { key: "descargaB", label: "Descarga B", color: "#f97316" },
+    ],
+  },
+};
+
+function trendPeriodLabel(period: PeriodKey) {
+  if (period === "d1") return "24 horas";
+  if (period === "week") return "7 dias";
+  return "30 dias";
 }
 
 function ChillersPage() {
   const [activeId, setActiveId] = useState<ChillerId>("blue");
   const [period, setPeriod] = useState<PeriodKey>("d1");
+  const [trendContext, setTrendContext] = useState<TrendContext>("water");
   const active = chillers.find((c) => c.id === activeId) || chillers[0];
   const selectedPeriod = periodOptions.find((p) => p.key === period) || periodOptions[0];
   const status = chillerStatus(active);
-  const trendData = useMemo(() => buildTrendData(active), [active]);
+  const trendData = useMemo(() => buildTrendData(active, period), [active, period]);
+  const activeTrend = trendContexts[trendContext];
   const color = chillerColors[active.id];
 
   return (
@@ -241,34 +320,80 @@ function ChillersPage() {
 
       <section className="grid gap-4 xl:grid-cols-[1.35fr_0.65fr_0.8fr]">
         <div className="glass-card p-5">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <SectionTitle>Tendências — últimas 24 horas</SectionTitle>
-            <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
-              <Legend className="bg-rose-400" label="Delta T (°C)" />
-              <Legend className="bg-sky-400" label="Saída (°C)" />
-              <Legend className="bg-emerald-400" label="Setpoint (°C)" />
-              <Legend className="bg-yellow-400" label="Capacidade (%)" />
+          <div className="mb-4 flex flex-col gap-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <SectionTitle>Tendências Operacionais</SectionTitle>
+                <p className="mt-1 text-xs text-muted-foreground">{activeTrend.subtitle} · {trendPeriodLabel(period)}</p>
+              </div>
+              <div className="flex rounded-xl border border-border/45 bg-background/25 p-1 text-xs font-semibold">
+                {(Object.keys(trendContexts) as TrendContext[]).map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setTrendContext(key)}
+                    className={cn(
+                      "rounded-lg px-3 py-1.5 transition",
+                      trendContext === key
+                        ? "bg-primary/18 text-primary shadow-[0_0_18px_rgba(56,189,248,0.16)]"
+                        : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+                    )}
+                  >
+                    {trendContexts[key].label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
+              {activeTrend.lines.map((line) => (
+                <Legend key={line.key} color={line.color} dashed={line.dashed} label={`${line.label} (${activeTrend.unit})`} />
+              ))}
             </div>
           </div>
-          <div className="h-64">
+          <div className="relative h-64 overflow-hidden rounded-2xl border border-border/30 bg-background/20 p-3">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(56,189,248,0.10),transparent_55%)]" />
             <ResponsiveContainer width="100%" height="100%">
-              <ReLineChart data={trendData} margin={{ left: -20, right: 10, top: 5, bottom: 0 }}>
-                <CartesianGrid stroke="rgba(148,163,184,0.14)" vertical={false} />
-                <XAxis dataKey="t" tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} interval={3} />
-                <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} tickLine={false} axisLine={false} />
+              <ReLineChart data={trendData} margin={{ left: -10, right: 10, top: 8, bottom: 0 }}>
+                <CartesianGrid stroke="rgba(148,163,184,0.12)" vertical={false} />
+                <XAxis
+                  dataKey="t"
+                  tick={{ fill: "#94a3b8", fontSize: 10 }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval={period === "month" ? 4 : period === "week" ? 0 : 3}
+                />
+                <YAxis
+                  tick={{ fill: "#94a3b8", fontSize: 10 }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={34}
+                  unit={activeTrend.unit}
+                  domain={trendContext === "capacity" ? [0, 100] : ["auto", "auto"]}
+                />
                 <Tooltip
                   contentStyle={{
-                    background: "rgba(10,17,30,0.92)",
+                    background: "rgba(10,17,30,0.94)",
                     border: "1px solid rgba(56,189,248,0.22)",
                     borderRadius: 12,
                     color: "#e2e8f0",
+                    boxShadow: "0 18px 55px rgba(0,0,0,0.35)",
                   }}
                   labelStyle={{ color: "#bae6fd" }}
+                  formatter={(value, name) => [`${value} ${activeTrend.unit}`, name]}
                 />
-                <Line type="monotone" dataKey="deltaT" name="Delta T" stroke="#fb7185" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="saida" name="Saída" stroke="#38bdf8" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="setpoint" name="Setpoint" stroke="#4ade80" strokeWidth={2} strokeDasharray="4 4" dot={false} />
-                <Line type="monotone" dataKey="capacidade" name="Capacidade" stroke="#facc15" strokeWidth={2} dot={false} />
+                {activeTrend.lines.map((line) => (
+                  <Line
+                    key={line.key}
+                    type="monotone"
+                    dataKey={line.key}
+                    name={line.label}
+                    stroke={line.color}
+                    strokeWidth={2.4}
+                    strokeDasharray={line.dashed ? "5 5" : undefined}
+                    dot={false}
+                    activeDot={{ r: 4, strokeWidth: 0 }}
+                  />
+                ))}
               </ReLineChart>
             </ResponsiveContainer>
           </div>
@@ -423,10 +548,13 @@ function CircuitMetric({ label, value, tone }: { label: string; value: string; t
   );
 }
 
-function Legend({ className, label }: { className: string; label: string }) {
+function Legend({ color, dashed, label }: { color: string; dashed?: boolean; label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5">
-      <span className={cn("h-0.5 w-5 rounded-full", className)} />
+      <span
+        className={cn("h-0.5 w-5 rounded-full", dashed && "bg-[length:6px_2px]")}
+        style={dashed ? { backgroundImage: `linear-gradient(to right, ${color} 55%, transparent 55%)` } : { backgroundColor: color }}
+      />
       {label}
     </span>
   );
