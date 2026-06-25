@@ -1,546 +1,837 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  Activity,
-  AlertCircle,
   AlertTriangle,
   ArrowRight,
-  Brain,
+  Bell,
+  Bot,
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
   CircuitBoard,
+  Clock3,
+  Database,
   Droplets,
+  Fan,
   Gauge,
-  Heart,
+  Info,
+  LineChart,
   Sparkles,
-  Trophy,
-  Wifi,
-  Zap,
+  ThermometerSun,
+  Wrench,
 } from "lucide-react";
-import { HomeChillerCard } from "@/components/cag/home-chiller-card";
-import { KpiSparkCard } from "@/components/cag/kpi-spark";
-import { Sparkline } from "@/components/cag/sparkline";
-import {
-  chillers,
-  comparatives,
-  correlations,
-  headerKpis,
-  homeIntel,
-  homeTimeline,
-  ranking,
-  chillerTheme,
-} from "@/data/mockCagData";
+import { useMemo, useState, type ReactNode } from "react";
+import chillerImage from "@/assets/chiller.png";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Visão Geral — CAG Intelligence AI" },
-      { name: "description", content: "Cockpit de operação da Central de Água Gelada com IA." },
-      { property: "og:title", content: "Visão Geral — CAG Intelligence AI" },
+      { title: "Home — CAG Expo Center Norte" },
       {
-        property: "og:description",
-        content: "Cockpit de operação da Central de Água Gelada com IA.",
+        name: "description",
+        content: "Centro de inteligência operacional para chillers e bombas do CAG.",
       },
     ],
   }),
   component: Index,
 });
 
-const iconForKpi: Record<string, any> = {
-  health: Heart,
-  deltaT: Activity,
-  bypass: Gauge,
-  online: CircuitBoard,
-  pumps: Droplets,
-  comps: Zap,
-  events: AlertCircle,
-  comm: Wifi,
+type PeriodKey = "d1" | "week" | "month";
+type Tone = "info" | "ok" | "warn" | "crit" | "ai";
+
+const periodConfig: Record<
+  PeriodKey,
+  {
+    label: string;
+    short: string;
+    analyzed: string;
+    comparison: string;
+    occurrencesTitle: string;
+  }
+> = {
+  d1: {
+    label: "D-1 (Ontem)",
+    short: "D-1",
+    analyzed: "25/05/2025 00:00 até 25/05/2025 23:59",
+    comparison: "vs ontem anterior",
+    occurrencesTitle: "Principais ocorrências do período",
+  },
+  week: {
+    label: "Semana",
+    short: "7 dias",
+    analyzed: "19/05/2025 00:00 até 25/05/2025 23:59",
+    comparison: "vs semana anterior",
+    occurrencesTitle: "Principais ocorrências da semana",
+  },
+  month: {
+    label: "Mês",
+    short: "30 dias",
+    analyzed: "01/05/2025 00:00 até 25/05/2025 23:59",
+    comparison: "vs mês anterior",
+    occurrencesTitle: "Principais ocorrências do mês",
+  },
 };
 
-const toneText: Record<string, string> = {
-  ok: "text-status-ok",
-  info: "text-status-info",
-  warn: "text-status-warn",
-  alert: "text-status-alert",
-  crit: "text-status-crit",
-  ai: "text-status-ai",
-  default: "text-foreground",
+const periodData: Record<
+  PeriodKey,
+  {
+    kpis: Array<{
+      label: string;
+      value: string;
+      detail: string;
+      previous: string;
+      delta: string;
+      deltaTone: "up" | "down" | "neutral";
+      icon: typeof CircuitBoard;
+      tone: Tone;
+    }>;
+    occurrences: Array<{
+      title: string;
+      desc: string;
+      time: string;
+      level: "Atenção" | "Crítico" | "Info";
+      tone: Tone;
+      icon: typeof ThermometerSun;
+    }>;
+    recommendations: Array<{ title: string; desc: string }>;
+    chillers: Array<{
+      id: "azul" | "vermelho" | "branco";
+      name: string;
+      status: "Normal" | "Atenção";
+      hours: string;
+      deltaT: string;
+      setpoint: string;
+      compare: string;
+      note: string;
+      tone: Tone;
+    }>;
+    summary: string;
+  }
+> = {
+  d1: {
+    kpis: [
+      {
+        label: "Chillers operando",
+        value: "3",
+        detail: "de 3",
+        previous: "Ontem: 2 de 3",
+        delta: "+1",
+        deltaTone: "up",
+        icon: CircuitBoard,
+        tone: "info",
+      },
+      {
+        label: "Bombas operando",
+        value: "4",
+        detail: "de 4",
+        previous: "Ontem: 3 de 4",
+        delta: "+1",
+        deltaTone: "up",
+        icon: Droplets,
+        tone: "ok",
+      },
+      {
+        label: "Equipamentos em atenção",
+        value: "2",
+        detail: "requerem verificação",
+        previous: "Ontem: 3",
+        delta: "-1",
+        deltaTone: "down",
+        icon: AlertTriangle,
+        tone: "warn",
+      },
+      {
+        label: "Alarmes ativos",
+        value: "1",
+        detail: "1 não crítico",
+        previous: "Ontem: 3",
+        delta: "-2",
+        deltaTone: "down",
+        icon: Bell,
+        tone: "crit",
+      },
+      {
+        label: "Disponibilidade dos dados",
+        value: "98%",
+        detail: "cobertura das leituras",
+        previous: "Ontem: 96%",
+        delta: "+2 pp",
+        deltaTone: "up",
+        icon: LineChart,
+        tone: "ai",
+      },
+    ],
+    occurrences: [
+      {
+        title: "Delta T abaixo do esperado no Chiller Vermelho",
+        desc: "Delta T médio de 2,1°C no período analisado (ontem: 3,4°C)",
+        time: "07:45",
+        level: "Atenção",
+        tone: "warn",
+        icon: ThermometerSun,
+      },
+      {
+        title: "Pressão abaixo do setpoint — BAG 2",
+        desc: "Pressão média 18% abaixo do setpoint durante o período",
+        time: "07:30",
+        level: "Crítico",
+        tone: "crit",
+        icon: Gauge,
+      },
+      {
+        title: "Bypass elevado — BAG 3",
+        desc: "Válvula de bypass aberta 65% do tempo (ontem: 32%)",
+        time: "06:50",
+        level: "Atenção",
+        tone: "info",
+        icon: Fan,
+      },
+    ],
+    recommendations: [
+      {
+        title: "Verificar fluxo de água gelada do Chiller Vermelho",
+        desc: "Delta T baixo pode indicar fluxo elevado ou baixa carga térmica.",
+      },
+      {
+        title: "Inspecionar operação da BAG 2",
+        desc: "Pressão da linha abaixo do setpoint durante a maior parte do período.",
+      },
+      {
+        title: "Verificar válvula de bypass da BAG 3",
+        desc: "Bypass elevado por período prolongado pode indicar baixa demanda.",
+      },
+    ],
+    chillers: [
+      {
+        id: "azul",
+        name: "Chiller Azul",
+        status: "Normal",
+        hours: "18,2 h",
+        deltaT: "5,8°C",
+        setpoint: "92%",
+        compare: "▲ 1,2 h  ▲ 0,6°C  ▲ 7 pp",
+        note: "Sem ocorrências relevantes",
+        tone: "ok",
+      },
+      {
+        id: "vermelho",
+        name: "Chiller Vermelho",
+        status: "Atenção",
+        hours: "21,5 h",
+        deltaT: "2,1°C",
+        setpoint: "18%",
+        compare: "▲ 0,8 h  ▼ 1,3°C  ▼ 24 pp",
+        note: "Delta T baixo",
+        tone: "warn",
+      },
+      {
+        id: "branco",
+        name: "Chiller Branco",
+        status: "Normal",
+        hours: "16,1 h",
+        deltaT: "5,2°C",
+        setpoint: "88%",
+        compare: "▲ 0,4 h  ▲ 0,3°C  ▲ 5 pp",
+        note: "Sem ocorrências relevantes",
+        tone: "ok",
+      },
+    ],
+    summary:
+      "Com base nos dados do D-1, o sistema identificou 2 ocorrências que merecem atenção, principalmente relacionadas ao Chiller Vermelho e à bomba BAG 2. Não há alarmes críticos no momento.",
+  },
+  week: {
+    kpis: [
+      {
+        label: "Chillers operando",
+        value: "3",
+        detail: "de 3",
+        previous: "Semana anterior: 3 de 3",
+        delta: "0",
+        deltaTone: "neutral",
+        icon: CircuitBoard,
+        tone: "info",
+      },
+      {
+        label: "Bombas operando",
+        value: "4",
+        detail: "de 4",
+        previous: "Semana anterior: 4 de 4",
+        delta: "0",
+        deltaTone: "neutral",
+        icon: Droplets,
+        tone: "ok",
+      },
+      {
+        label: "Equipamentos em atenção",
+        value: "3",
+        detail: "pontos recorrentes",
+        previous: "Semana anterior: 2",
+        delta: "+1",
+        deltaTone: "up",
+        icon: AlertTriangle,
+        tone: "warn",
+      },
+      {
+        label: "Alarmes ativos",
+        value: "4",
+        detail: "eventos no período",
+        previous: "Semana anterior: 6",
+        delta: "-2",
+        deltaTone: "down",
+        icon: Bell,
+        tone: "crit",
+      },
+      {
+        label: "Disponibilidade dos dados",
+        value: "97%",
+        detail: "cobertura semanal",
+        previous: "Semana anterior: 95%",
+        delta: "+2 pp",
+        deltaTone: "up",
+        icon: LineChart,
+        tone: "ai",
+      },
+    ],
+    occurrences: [
+      {
+        title: "Delta T recorrente abaixo do esperado",
+        desc: "Chiller Vermelho apresentou desvio em 4 dos 7 dias analisados",
+        time: "semana",
+        level: "Atenção",
+        tone: "warn",
+        icon: ThermometerSun,
+      },
+      {
+        title: "Pressão da linha instável nas bombas",
+        desc: "Variação observada em janelas de maior demanda operacional",
+        time: "semana",
+        level: "Atenção",
+        tone: "crit",
+        icon: Gauge,
+      },
+      {
+        title: "Bypass acima do padrão histórico",
+        desc: "Comportamento repetido em mais de um grupo de bombas",
+        time: "semana",
+        level: "Info",
+        tone: "info",
+        icon: Fan,
+      },
+    ],
+    recommendations: [
+      {
+        title: "Programar inspeção do circuito hidráulico vermelho",
+        desc: "Recorrência semanal sugere necessidade de verificação operacional.",
+      },
+      {
+        title: "Revisar parâmetros de controle das bombas",
+        desc: "Instabilidade de pressão apareceu em mais de uma janela analisada.",
+      },
+      {
+        title: "Validar posição de bypass em horários de baixa carga",
+        desc: "Abertura prolongada pode explicar parte do Delta T reduzido.",
+      },
+    ],
+    chillers: [
+      {
+        id: "azul",
+        name: "Chiller Azul",
+        status: "Normal",
+        hours: "122 h",
+        deltaT: "5,6°C",
+        setpoint: "91%",
+        compare: "▲ 4 h  ▲ 0,2°C  ▲ 3 pp",
+        note: "Operação estável",
+        tone: "ok",
+      },
+      {
+        id: "vermelho",
+        name: "Chiller Vermelho",
+        status: "Atenção",
+        hours: "141 h",
+        deltaT: "3,0°C",
+        setpoint: "42%",
+        compare: "▲ 9 h  ▼ 0,8°C  ▼ 12 pp",
+        note: "Desvio recorrente",
+        tone: "warn",
+      },
+      {
+        id: "branco",
+        name: "Chiller Branco",
+        status: "Normal",
+        hours: "116 h",
+        deltaT: "5,0°C",
+        setpoint: "86%",
+        compare: "▼ 2 h  ▲ 0,1°C  ▲ 1 pp",
+        note: "Sem recorrências críticas",
+        tone: "ok",
+      },
+    ],
+    summary:
+      "Na visão semanal, o comportamento que mais se repete está associado ao grupo vermelho: Delta T reduzido, bypass elevado e pressão de linha instável. Recomenda-se uma inspeção planejada antes da próxima operação de maior carga.",
+  },
+  month: {
+    kpis: [
+      {
+        label: "Chillers operando",
+        value: "3",
+        detail: "de 3",
+        previous: "Mês anterior: 3 de 3",
+        delta: "0",
+        deltaTone: "neutral",
+        icon: CircuitBoard,
+        tone: "info",
+      },
+      {
+        label: "Bombas operando",
+        value: "4",
+        detail: "de 4",
+        previous: "Mês anterior: 4 de 4",
+        delta: "0",
+        deltaTone: "neutral",
+        icon: Droplets,
+        tone: "ok",
+      },
+      {
+        label: "Equipamentos em atenção",
+        value: "4",
+        detail: "padrões identificados",
+        previous: "Mês anterior: 5",
+        delta: "-1",
+        deltaTone: "down",
+        icon: AlertTriangle,
+        tone: "warn",
+      },
+      {
+        label: "Alarmes ativos",
+        value: "12",
+        detail: "eventos acumulados",
+        previous: "Mês anterior: 15",
+        delta: "-3",
+        deltaTone: "down",
+        icon: Bell,
+        tone: "crit",
+      },
+      {
+        label: "Disponibilidade dos dados",
+        value: "96%",
+        detail: "cobertura mensal",
+        previous: "Mês anterior: 94%",
+        delta: "+2 pp",
+        deltaTone: "up",
+        icon: LineChart,
+        tone: "ai",
+      },
+    ],
+    occurrences: [
+      {
+        title: "Padrão mensal de baixa troca térmica",
+        desc: "Grupo vermelho concentra a maior parte dos desvios de Delta T",
+        time: "mês",
+        level: "Atenção",
+        tone: "warn",
+        icon: ThermometerSun,
+      },
+      {
+        title: "Pressão de linha abaixo do setpoint em dias específicos",
+        desc: "Eventos concentrados em períodos de transição operacional",
+        time: "mês",
+        level: "Info",
+        tone: "info",
+        icon: Gauge,
+      },
+      {
+        title: "Alarmes acumulados em queda",
+        desc: "Volume mensal inferior ao período anterior equivalente",
+        time: "mês",
+        level: "Info",
+        tone: "ok",
+        icon: Bell,
+      },
+    ],
+    recommendations: [
+      {
+        title: "Criar plano de verificação mensal do grupo vermelho",
+        desc: "Os desvios são recorrentes e devem ser acompanhados por manutenção preventiva.",
+      },
+      {
+        title: "Registrar comportamento de bypass por faixa de carga",
+        desc: "A análise mensal sugere relação entre bypass e baixa troca térmica.",
+      },
+      {
+        title: "Comparar leituras com calendário de eventos",
+        desc: "A operação por evento pode explicar parte das variações do mês.",
+      },
+    ],
+    chillers: [
+      {
+        id: "azul",
+        name: "Chiller Azul",
+        status: "Normal",
+        hours: "506 h",
+        deltaT: "5,4°C",
+        setpoint: "89%",
+        compare: "▲ 11 h  ▲ 0,1°C  ▲ 2 pp",
+        note: "Comportamento consistente",
+        tone: "ok",
+      },
+      {
+        id: "vermelho",
+        name: "Chiller Vermelho",
+        status: "Atenção",
+        hours: "537 h",
+        deltaT: "3,4°C",
+        setpoint: "54%",
+        compare: "▲ 21 h  ▼ 0,4°C  ▼ 7 pp",
+        note: "Padrão de atenção mensal",
+        tone: "warn",
+      },
+      {
+        id: "branco",
+        name: "Chiller Branco",
+        status: "Normal",
+        hours: "482 h",
+        deltaT: "5,1°C",
+        setpoint: "84%",
+        compare: "▼ 8 h  ▲ 0,2°C  ▲ 2 pp",
+        note: "Sem tendência crítica",
+        tone: "ok",
+      },
+    ],
+    summary:
+      "Na visão mensal, a operação geral permanece estável. O principal padrão de manutenção observado está relacionado ao grupo vermelho, com indícios recorrentes de baixa troca térmica e bypass elevado em algumas janelas.",
+  },
 };
 
-const toneBg: Record<string, string> = {
-  ok: "bg-status-ok/15 border-status-ok/40 text-status-ok",
-  info: "bg-status-info/15 border-status-info/40 text-status-info",
-  warn: "bg-status-warn/15 border-status-warn/40 text-status-warn",
-  alert: "bg-status-alert/15 border-status-alert/40 text-status-alert",
-  crit: "bg-status-crit/15 border-status-crit/40 text-status-crit",
-  ai: "bg-status-ai/15 border-status-ai/40 text-status-ai",
+const toneClasses: Record<Tone, { text: string; border: string; bg: string; glow: string; soft: string }> = {
+  info: {
+    text: "text-primary",
+    border: "border-primary/35",
+    bg: "bg-primary/10",
+    glow: "shadow-[0_0_34px_rgba(0,180,255,0.16)]",
+    soft: "from-primary/22",
+  },
+  ok: {
+    text: "text-status-ok",
+    border: "border-status-ok/35",
+    bg: "bg-status-ok/10",
+    glow: "shadow-[0_0_34px_oklch(0.82_0.22_150_/_0.12)]",
+    soft: "from-status-ok/18",
+  },
+  warn: {
+    text: "text-status-warn",
+    border: "border-status-warn/35",
+    bg: "bg-status-warn/10",
+    glow: "shadow-[0_0_34px_oklch(0.88_0.2_95_/_0.12)]",
+    soft: "from-status-warn/20",
+  },
+  crit: {
+    text: "text-status-crit",
+    border: "border-status-crit/35",
+    bg: "bg-status-crit/10",
+    glow: "shadow-[0_0_34px_oklch(0.7_0.28_22_/_0.12)]",
+    soft: "from-status-crit/18",
+  },
+  ai: {
+    text: "text-status-ai",
+    border: "border-status-ai/40",
+    bg: "bg-status-ai/10",
+    glow: "shadow-[0_0_40px_oklch(0.75_0.24_300_/_0.16)]",
+    soft: "from-status-ai/22",
+  },
 };
 
-const temporalMatrix = [
-  {
-    metric: "Delta T médio",
-    today: "4.4°C",
-    yesterday: "4.9°C",
-    week: "5.1°C",
-    month: "5.0°C",
-    trend: "↓ 18%",
-    tone: "alert",
-  },
-  {
-    metric: "Bypass médio",
-    today: "34%",
-    yesterday: "24%",
-    week: "22%",
-    month: "20%",
-    trend: "↑ 42%",
-    tone: "alert",
-  },
-  {
-    metric: "Capacidade média",
-    today: "75%",
-    yesterday: "69%",
-    week: "65%",
-    month: "61%",
-    trend: "↑ 16%",
-    tone: "info",
-  },
-  {
-    metric: "Saúde da Central",
-    today: "81",
-    yesterday: "85",
-    week: "87",
-    month: "88",
-    trend: "↓ 6 pts",
-    tone: "warn",
-  },
-  {
-    metric: "Partidas",
-    today: "187",
-    yesterday: "153",
-    week: "132",
-    month: "118",
-    trend: "↑ 38%",
-    tone: "alert",
-  },
-  {
-    metric: "Alarmes",
-    today: "4",
-    yesterday: "2",
-    week: "1.4",
-    month: "1.1",
-    trend: "↑ 2",
-    tone: "warn",
-  },
-] as const;
+const chillerAccent = {
+  azul: "oklch(0.82 0.22 230)",
+  vermelho: "oklch(0.72 0.28 22)",
+  branco: "oklch(0.9 0.02 240)",
+};
 
-const decisionCards = [
-  {
-    label: "O que piorou?",
-    value: "Bypass + Delta T",
-    desc: "Chiller Vermelho saiu do padrão semanal",
-    tone: "alert",
-  },
-  {
-    label: "Possível causa",
-    value: "Recirculação",
-    desc: "Bypass elevado associado à baixa troca térmica",
-    tone: "ai",
-  },
-  {
-    label: "Onde agir primeiro",
-    value: "Bombas / Bypass",
-    desc: "Verificar válvula bypass e modo das bombas",
-    tone: "warn",
-  },
-  {
-    label: "Impacto estimado",
-    value: "Desempenho ↓",
-    desc: "Operação térmica com menor estabilidade no período",
-    tone: "alert",
-  },
-] as const;
+function Delta({ tone, value }: { tone: "up" | "down" | "neutral"; value: string }) {
+  const classes =
+    tone === "up"
+      ? "text-status-ok"
+      : tone === "down"
+        ? "text-status-ok"
+        : "text-muted-foreground";
+  const symbol = tone === "up" ? "▲" : tone === "down" ? "▼" : "—";
+  return (
+    <span className={cn("font-mono text-[11px] font-semibold", classes)}>
+      {value === "0" ? "0" : `${symbol} ${value}`}
+    </span>
+  );
+}
+
+function StatusPill({ tone, children }: { tone: Tone; children: ReactNode }) {
+  const t = toneClasses[tone];
+  return (
+    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold", t.border, t.bg, t.text)}>
+      {children}
+    </span>
+  );
+}
+
+function KpiCard({ item }: { item: (typeof periodData)[PeriodKey]["kpis"][number] }) {
+  const Icon = item.icon;
+  const t = toneClasses[item.tone];
+  return (
+    <article className={cn("glass-card group relative min-h-[138px] overflow-hidden p-4 transition-all duration-300 hover:-translate-y-0.5", t.border, t.glow)}>
+      <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent opacity-70", t.soft)} />
+      <div className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-current opacity-[0.08] blur-3xl" />
+      <div className="relative flex items-start justify-between gap-3">
+        <div className={cn("grid h-12 w-12 shrink-0 place-items-center rounded-xl border", t.border, t.bg, t.text)}>
+          <Icon className="h-6 w-6" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className={cn("text-[10px] font-bold uppercase tracking-[0.14em]", t.text)}>{item.label}</div>
+          <div className="mt-2 flex items-end gap-2">
+            <span className="font-display text-4xl font-bold leading-none tracking-tight tabular-nums">{item.value}</span>
+            <span className="mb-1 text-sm text-muted-foreground">{item.detail}</span>
+          </div>
+          <div className="mt-3 flex items-center justify-between border-t border-border/35 pt-2 text-[11px] text-muted-foreground">
+            <span>{item.previous}</span>
+            <Delta tone={item.deltaTone} value={item.delta} />
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function OccurrenceRow({ item }: { item: (typeof periodData)[PeriodKey]["occurrences"][number] }) {
+  const Icon = item.icon;
+  const t = toneClasses[item.tone];
+  return (
+    <div className="group relative grid grid-cols-[4px_52px_minmax(0,1fr)_auto] items-center gap-4 border-b border-border/35 py-3 last:border-b-0">
+      <div className={cn("h-16 rounded-full", item.tone === "crit" ? "bg-status-crit" : item.tone === "warn" ? "bg-status-warn" : "bg-primary")} />
+      <div className={cn("grid h-12 w-12 place-items-center rounded-xl border", t.border, t.bg, t.text)}>
+        <Icon className="h-6 w-6" />
+      </div>
+      <div className="min-w-0">
+        <div className="font-display text-sm font-semibold leading-tight">{item.title}</div>
+        <div className="mt-1 text-xs leading-snug text-muted-foreground">{item.desc}</div>
+      </div>
+      <div className="flex items-center gap-3">
+        <StatusPill tone={item.tone}>{item.level}</StatusPill>
+        <span className="font-mono text-xs text-muted-foreground">{item.time}</span>
+      </div>
+    </div>
+  );
+}
+
+function RecommendationRow({ index, item }: { index: number; item: { title: string; desc: string } }) {
+  return (
+    <div className="grid grid-cols-[48px_minmax(0,1fr)] gap-3 border-b border-border/35 py-4 last:border-b-0">
+      <div className="grid h-10 w-10 place-items-center rounded-full border border-status-ok/35 bg-status-ok/15 font-display text-lg font-bold text-status-ok shadow-[0_0_22px_oklch(0.82_0.22_150_/_0.18)]">
+        {index + 1}
+      </div>
+      <div>
+        <div className="font-display text-sm font-semibold">{item.title}</div>
+        <div className="mt-1 text-xs leading-snug text-muted-foreground">{item.desc}</div>
+      </div>
+    </div>
+  );
+}
+
+function ChillerStatusCard({ item, comparison }: { item: (typeof periodData)[PeriodKey]["chillers"][number]; comparison: string }) {
+  const color = chillerAccent[item.id];
+  const isWarn = item.tone === "warn";
+  return (
+    <Link
+      to="/chillers/$id"
+      params={{ id: item.id }}
+      className="group relative min-h-[206px] overflow-hidden rounded-xl border border-border/45 bg-surface-2/35 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/50"
+    >
+      <div className="pointer-events-none absolute inset-0 opacity-60" style={{ background: `radial-gradient(circle at 18% 38%, ${color.replace(")", " / 0.26)")}, transparent 36%)` }} />
+      <div className="relative flex items-start justify-between gap-3">
+        <div>
+          <div className="font-display text-sm font-bold uppercase tracking-wide">{item.name}</div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground">comparação {comparison}</div>
+        </div>
+        <StatusPill tone={item.tone}>{item.status}</StatusPill>
+      </div>
+      <div className="relative mt-4 grid grid-cols-[112px_minmax(0,1fr)] gap-4">
+        <div className="relative h-24 overflow-hidden rounded-xl border border-border/35 bg-black/20">
+          <div className="absolute inset-0 opacity-70" style={{ background: `radial-gradient(circle at 50% 50%, ${color.replace(")", " / 0.36)")}, transparent 70%)` }} />
+          <img src={chillerImage} alt={item.name} className="absolute bottom-1 left-1/2 h-24 -translate-x-1/2 object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.45)]" />
+        </div>
+        <div className="space-y-2 text-xs">
+          <div className="flex justify-between gap-2"><span className="text-muted-foreground">Horas de operação</span><strong>{item.hours}</strong></div>
+          <div className="flex justify-between gap-2"><span className="text-muted-foreground">Delta T médio</span><strong className={isWarn ? "text-status-crit" : ""}>{item.deltaT}</strong></div>
+          <div className="flex justify-between gap-2"><span className="text-muted-foreground">Setpoint atingido</span><strong className={isWarn ? "text-status-crit" : ""}>{item.setpoint}</strong></div>
+        </div>
+      </div>
+      <div className="relative mt-3 border-t border-border/35 pt-3">
+        <div className={cn("font-mono text-[11px]", isWarn ? "text-status-crit" : "text-status-ok")}>{item.compare}</div>
+        <div className={cn("mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px]", isWarn ? "border-status-warn/35 bg-status-warn/10 text-status-warn" : "border-status-ok/35 bg-status-ok/10 text-status-ok")}>
+          {isWarn ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+          {item.note}
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function InfoFooter({ icon: Icon, label, value, detail }: { icon: typeof CalendarDays; label: string; value: string; detail?: string }) {
+  return (
+    <div className="glass-card relative overflow-hidden p-4">
+      <div className="absolute -left-8 -top-8 h-20 w-20 rounded-full bg-primary/10 blur-2xl" />
+      <div className="relative flex items-center gap-3">
+        <div className="grid h-10 w-10 place-items-center rounded-xl border border-primary/35 bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
+          <div className="mt-1 font-display text-lg font-bold leading-tight">{value}</div>
+          {detail ? <div className="mt-0.5 text-[11px] text-muted-foreground">{detail}</div> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function Index() {
+  const [period, setPeriod] = useState<PeriodKey>("d1");
+  const cfg = periodConfig[period];
+  const data = periodData[period];
+
+  const suggestedQuestions = useMemo(
+    () => [
+      "Por que o Chiller Vermelho está em atenção?",
+      "Quais bombas precisam de inspeção?",
+      period === "d1" ? "O que mudou desde ontem?" : period === "week" ? "O que mudou versus a semana anterior?" : "O que mudou versus o mês anterior?",
+      "Mostrar apenas ocorrências críticas",
+    ],
+    [period],
+  );
+
   return (
-    <div className="space-y-5">
-      {/* Header KPIs */}
-      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-8">
-        {headerKpis.map((k) => (
-          <KpiSparkCard key={k.key} kpi={k} icon={iconForKpi[k.key]} />
-        ))}
-      </div>
+    <div className="relative space-y-5 overflow-hidden pb-2">
+      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-status-ai/10 blur-3xl" />
+      <div className="pointer-events-none absolute left-1/4 top-40 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
 
-      {/* Decision layer */}
-      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
-        {decisionCards.map((card) => (
-          <div
-            key={card.label}
-            className={cn(
-              "glass-card relative overflow-hidden p-3",
-              toneBg[card.tone].replace(/text-\S+/, ""),
-            )}
-          >
-            <div
-              className={cn(
-                "text-[9px] font-semibold uppercase tracking-[0.22em]",
-                toneText[card.tone],
-              )}
-            >
-              {card.label}
-            </div>
-            <div className="mt-1 font-display text-lg font-bold leading-tight">{card.value}</div>
-            <div className="mt-1 text-[11px] leading-snug text-muted-foreground">{card.desc}</div>
-            <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-current to-transparent opacity-25" />
-          </div>
-        ))}
-      </div>
-
-      {/* Chillers + AI panel */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <section className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <div className="mb-2 flex items-end justify-between">
-            <div>
-              <h2 className="font-display text-base font-semibold tracking-wide">
-                CHILLERS DA CENTRAL
-              </h2>
-              <p className="text-[11px] text-muted-foreground">
-                Clique em um chiller para abrir o cockpit detalhado
-              </p>
-            </div>
-            <div className="hidden gap-3 text-[10px] text-muted-foreground md:flex">
-              <span>3 unidades</span>
-              <span>·</span>
-              <span>6 circuitos</span>
-              <span>·</span>
-              <span>12 bombas</span>
-            </div>
-          </div>
-          <div className="grid gap-3 lg:grid-cols-3">
-            {chillers.map((c) => (
-              <HomeChillerCard key={c.id} chiller={c} />
-            ))}
-          </div>
+          <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">Bom dia! <span aria-hidden>👋</span></h1>
+          <p className="mt-1 text-sm text-muted-foreground md:text-base">Visão geral da operação dos chillers e bombas.</p>
         </div>
-
-        {/* AI Intelligence panel */}
-        <aside className="glass-card relative flex flex-col overflow-hidden p-4">
-          <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-status-ai/20 blur-3xl" />
-          <div className="relative">
-            <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-              Centro de Inteligência
-            </div>
-            <div className="mt-1 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <div className="grid h-8 w-8 place-items-center rounded-md border border-status-ai/40 bg-status-ai/15 text-status-ai">
-                  <Brain className="h-4 w-4" />
-                </div>
-                <h3 className="font-display text-base font-bold">Recomendação IA</h3>
-              </div>
-              <span className="inline-flex items-center gap-1 rounded-full border border-status-alert/40 bg-status-alert/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-status-alert">
-                <AlertTriangle className="h-3 w-3" /> Alerta
-              </span>
-            </div>
-
-            <p className="mt-3 text-[12px] leading-relaxed text-foreground/90">
-              Durante o D-1, o{" "}
-              <span className="font-semibold" style={{ color: chillerTheme.red.hex }}>
-                Chiller Vermelho
-              </span>{" "}
-              concentrou a maior carga, apresentou queda de Δ T frente à média semanal e bypass
-              acima do padrão. O padrão sugere recirculação hidráulica ou baixa troca térmica
-              efetiva.
-            </p>
-
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <div className="rounded-md border border-border/50 bg-surface-2/40 p-2">
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                  Equipamento
-                </div>
-                <div
-                  className="mt-0.5 text-[11px] font-semibold"
-                  style={{ color: chillerTheme.red.hex }}
-                >
-                  {homeIntel.equipamento}
-                </div>
-              </div>
-              <div className="rounded-md border border-border/50 bg-surface-2/40 p-2">
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                  Confiança
-                </div>
-                <div className="mt-0.5 font-display text-base font-bold text-status-ai">
-                  {homeIntel.confianca}%
-                </div>
-              </div>
-              <div className="rounded-md border border-border/50 bg-surface-2/40 p-2">
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                  Causa provável
-                </div>
-                <div className="mt-0.5 text-[11px] font-semibold text-status-alert">
-                  {homeIntel.causa}
-                </div>
-              </div>
-              <div className="rounded-md border border-border/50 bg-surface-2/40 p-2">
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                  Impacto
-                </div>
-                <div className="mt-0.5 text-[11px] font-semibold text-status-alert">
-                  {homeIntel.impacto}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-3 rounded-md border border-status-ai/30 bg-status-ai/5 p-2.5">
-              <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wider text-status-ai">
-                <Sparkles className="h-3 w-3" /> Ação sugerida
-              </div>
-              <p className="mt-1 text-[12px] leading-snug">{homeIntel.acao}</p>
-            </div>
-
-            <button className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-md border border-primary/40 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-primary transition hover:bg-primary/20">
-              Abrir Análise IA <ArrowRight className="h-3 w-3" />
-            </button>
-          </div>
-
-          {/* Timeline preview */}
-          <div className="relative mt-4 border-t border-border/40 pt-3">
-            <div className="mb-2 flex items-center justify-between">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.18em]">
-                Eventos do D-1
-              </div>
-              <button className="text-[10px] text-muted-foreground hover:text-foreground">
-                Ver todos
-              </button>
-            </div>
-            <ul className="space-y-2">
-              {homeTimeline.slice(0, 5).map((t) => (
-                <li key={t.id} className="flex items-center gap-2">
-                  <div className="font-mono text-[10px] text-muted-foreground">{t.time}</div>
-                  <div className="flex-1 leading-tight">
-                    <div className={cn("text-[11px] font-semibold", toneText[t.tone])}>
-                      {t.title}
-                    </div>
-                    <div className="text-[10px] text-muted-foreground">{t.desc}</div>
-                  </div>
-                  <div className="h-7 w-16">
-                    <Sparkline data={t.spark} tone={t.tone} height={28} />
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </aside>
-      </div>
-
-      {/* Comparativos + Ranking */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <section className="glass-card p-4">
-          <div className="mb-3 flex items-end justify-between">
-            <div>
-              <h3 className="font-display text-sm font-bold uppercase tracking-wider">
-                O que mudou no período
-              </h3>
-              <p className="text-[10px] text-muted-foreground">
-                Comparação executiva · D-1 × D-2 × média 7 dias
-              </p>
-            </div>
-            <button className="text-[10px] text-muted-foreground hover:text-foreground">
-              Ver todos →
-            </button>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-            {comparatives.map((c) => (
-              <div
-                key={c.key}
-                className="rounded-md border border-border/40 bg-surface-2/30 p-2.5 transition hover:border-primary/40"
-              >
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  {c.label}
-                </div>
-                <div className="mt-1 flex items-baseline gap-1">
-                  <span
-                    className={cn("font-display text-xl font-bold tabular-nums", toneText[c.tone])}
-                  >
-                    {c.value}
-                  </span>
-                  {c.unit ? (
-                    <span className="text-[10px] text-muted-foreground">{c.unit}</span>
-                  ) : null}
-                </div>
-                <div className="mt-0.5 flex items-center justify-between text-[9px]">
-                  <span
-                    className={cn(
-                      c.d1.trend === "up"
-                        ? "text-status-alert"
-                        : c.d1.trend === "down"
-                          ? "text-status-info"
-                          : "text-muted-foreground",
-                    )}
-                  >
-                    {c.d1.delta} <span className="text-muted-foreground">{c.d1.label}</span>
-                  </span>
-                  <span
-                    className={cn(
-                      c.d7.trend === "up"
-                        ? "text-status-alert"
-                        : c.d7.trend === "down"
-                          ? "text-status-info"
-                          : "text-muted-foreground",
-                    )}
-                  >
-                    {c.d7.delta} <span className="text-muted-foreground">{c.d7.label}</span>
-                  </span>
-                </div>
-                <div className="-mx-1 mt-1">
-                  <Sparkline data={c.spark} tone={c.tone} height={26} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="glass-card p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h3 className="font-display text-sm font-bold uppercase tracking-wider">
-                Ranking Operacional
-              </h3>
-              <p className="text-[10px] text-muted-foreground">
-                Por saúde · capacidade · estabilidade
-              </p>
-            </div>
-            <Trophy className="h-4 w-4 text-status-warn" />
-          </div>
-          <ol className="space-y-2">
-            {ranking.map((r) => {
-              const t = chillerTheme[r.chiller];
-              const medal =
-                r.pos === 1
-                  ? "text-status-warn"
-                  : r.pos === 2
-                    ? "text-foreground/80"
-                    : "text-status-alert";
-              return (
-                <li
-                  key={r.pos}
-                  className="rounded-md border border-border/40 bg-surface-2/30 p-2.5"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className={cn("font-display text-xl font-bold", medal)}>{r.pos}°</div>
-                    <div className="flex-1">
-                      <div className="font-display text-sm font-semibold" style={{ color: t.hex }}>
-                        {r.name}
-                      </div>
-                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-border/40">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            width: `${r.score}%`,
-                            background: t.hex,
-                            boxShadow: `0 0 8px ${t.hex}`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div
-                        className="font-display text-base font-bold tabular-nums"
-                        style={{ color: t.hex }}
-                      >
-                        {r.score}
-                        <span className="text-[10px] text-muted-foreground">/100</span>
-                      </div>
-                      <div className="text-[9px] text-muted-foreground">
-                        Cap. {r.capacity}% · Est. {r.stability}%
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      </div>
-
-      {/* Comparativos temporais */}
-      <section className="glass-card p-4">
-        <div className="mb-3 flex items-end justify-between">
+        <div className="flex flex-col gap-3 lg:items-end">
           <div>
-            <h3 className="font-display text-sm font-bold uppercase tracking-wider">
-              Comparativos Temporais
-            </h3>
-            <p className="text-[10px] text-muted-foreground">
-              D-1 × D-2 × média 7 dias × média 30 dias
-            </p>
-          </div>
-          <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">
-            Análise executiva
-          </span>
-        </div>
-        <div className="overflow-hidden rounded-lg border border-border/35">
-          <div className="grid grid-cols-[1.4fr_repeat(5,0.8fr)] bg-surface-2/45 px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            <div>Métrica</div>
-            <div>D-1</div>
-            <div>D-2</div>
-            <div>Média 7d</div>
-            <div>Média 30d</div>
-            <div>Tendência</div>
-          </div>
-          {temporalMatrix.map((row) => (
-            <div
-              key={row.metric}
-              className="grid grid-cols-[1.4fr_repeat(5,0.8fr)] border-t border-border/30 px-3 py-2 text-[12px]"
-            >
-              <div className="font-semibold text-foreground/90">{row.metric}</div>
-              <div className={cn("font-mono font-semibold", toneText[row.tone])}>{row.today}</div>
-              <div className="font-mono text-muted-foreground">{row.yesterday}</div>
-              <div className="font-mono text-muted-foreground">{row.week}</div>
-              <div className="font-mono text-muted-foreground">{row.month}</div>
-              <div className={cn("font-mono font-semibold", toneText[row.tone])}>{row.trend}</div>
+            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Período analisado</div>
+            <div className="inline-flex rounded-xl border border-border/60 bg-surface-2/50 p-1 shadow-[inset_0_0_22px_rgba(0,180,255,0.05)]">
+              {(Object.keys(periodConfig) as PeriodKey[]).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setPeriod(key)}
+                  className={cn(
+                    "rounded-lg px-4 py-2 text-sm font-semibold transition-all",
+                    period === key
+                      ? "bg-primary/25 text-primary shadow-[0_0_20px_rgba(0,180,255,0.24),inset_0_0_14px_rgba(0,180,255,0.12)]"
+                      : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+                  )}
+                >
+                  {periodConfig[key].label}
+                </button>
+              ))}
             </div>
-          ))}
+          </div>
+          <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-surface-2/45 px-4 py-3">
+            <CalendarDays className="h-4 w-4 text-primary" />
+            <div className="text-right">
+              <div className="font-display text-sm font-semibold">26 de Maio de 2025</div>
+              <div className="text-[11px] text-muted-foreground">Base comparativa: {cfg.short}</div>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Correlações inteligentes */}
-      <section className="glass-card p-4">
-        <div className="mb-3 flex items-end justify-between">
-          <div>
-            <h3 className="font-display text-sm font-bold uppercase tracking-wider">
-              Correlações Inteligentes
-            </h3>
-            <p className="text-[10px] text-muted-foreground">
-              Relações que mais impactam a operação no período
-            </p>
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {data.kpis.map((item) => <KpiCard key={item.label} item={item} />)}
+      </section>
+
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Info className="h-3.5 w-3.5 text-primary" />
+        Comparações realizadas com o período anterior equivalente: <span className="text-foreground/80">{cfg.comparison}</span>.
+      </div>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
+        <div className="glass-card overflow-hidden p-5">
+          <div className="mb-2 flex items-center justify-between border-b border-border/35 pb-3">
+            <h2 className="font-display text-base font-bold uppercase tracking-wide">{cfg.occurrencesTitle}</h2>
+            <Link to="/alarms" className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary/80">
+              Ver todas <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
-          <span className="hidden rounded-full border border-status-ai/40 bg-status-ai/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-status-ai md:inline-flex">
-            5 padrões detectados
-          </span>
+          <div>{data.occurrences.map((item) => <OccurrenceRow key={item.title} item={item} />)}</div>
         </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          {correlations.map((c) => (
-            <div
-              key={c.key}
-              className={cn(
-                "rounded-md border bg-surface-2/30 p-2.5 transition hover:translate-y-[-2px]",
-                toneBg[c.tone].replace(/text-\S+/, ""),
-              )}
-            >
-              <div
-                className={cn(
-                  "text-[10px] font-semibold uppercase tracking-wider",
-                  toneText[c.tone],
-                )}
-              >
-                {c.title}
+
+        <div className="glass-card overflow-hidden p-5">
+          <div className="mb-2 flex items-center justify-between border-b border-border/35 pb-3">
+            <h2 className="font-display text-base font-bold uppercase tracking-wide">Recomendações principais</h2>
+            <Wrench className="h-4 w-4 text-status-ok" />
+          </div>
+          <div>{data.recommendations.map((item, index) => <RecommendationRow key={item.title} index={index} item={item} />)}</div>
+          <Link to="/ai" className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/15">
+            Ver todas as recomendações <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_400px]">
+        <div className="glass-card overflow-hidden p-4">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-display text-base font-bold uppercase tracking-wide">Status dos chillers</h2>
+            <span className="text-xs text-muted-foreground">3 unidades · 6 circuitos</span>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-3">
+            {data.chillers.map((item) => <ChillerStatusCard key={item.id} item={item} comparison={cfg.comparison} />)}
+          </div>
+          <Link to="/chillers" className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/5 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/10">
+            Ver todos os chillers <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <aside className="glass-card relative overflow-hidden border-status-ai/45 p-5 shadow-[0_0_42px_oklch(0.75_0.24_300_/_0.14)]">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-status-ai/20 blur-3xl" />
+          <div className="pointer-events-none absolute bottom-24 right-0 h-px w-40 bg-gradient-to-r from-transparent via-status-ai/60 to-transparent" />
+          <div className="relative flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 place-items-center rounded-xl border border-status-ai/40 bg-status-ai/15 text-status-ai">
+                <Sparkles className="h-5 w-5" />
               </div>
-              <p className="mt-1 text-[11px] leading-snug text-foreground/85">{c.desc}</p>
-              <div className="mt-2 flex items-center justify-between text-[9px]">
-                <span className="text-muted-foreground">
-                  Impacto: <span className={cn("font-semibold", toneText[c.tone])}>{c.impact}</span>
-                </span>
-                <span className="text-muted-foreground">{c.scope}</span>
+              <div>
+                <h2 className="font-display text-base font-bold uppercase tracking-wide">Resumo operacional</h2>
+                <div className="text-[11px] text-muted-foreground">Gerado a partir do período selecionado</div>
               </div>
             </div>
-          ))}
-        </div>
+            <span className="rounded-full border border-status-ai/30 bg-status-ai/15 px-2 py-1 text-[10px] font-bold uppercase text-status-ai">Beta</span>
+          </div>
+          <p className="relative mt-5 text-sm leading-7 text-foreground/90">{data.summary}</p>
+
+          <div className="relative mt-5 border-t border-border/35 pt-4">
+            <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Perguntas sugeridas</div>
+            <div className="space-y-2">
+              {suggestedQuestions.map((q) => (
+                <button key={q} type="button" className="flex w-full items-center justify-between rounded-lg border border-status-ai/25 bg-status-ai/5 px-3 py-2 text-left text-xs text-status-ai transition hover:border-status-ai/45 hover:bg-status-ai/10">
+                  <span>{q}</span>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Link to="/ai" className="relative mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-status-ai/45 bg-status-ai/12 px-4 py-3 font-display text-sm font-bold text-status-ai shadow-[0_0_28px_oklch(0.75_0.24_300_/_0.16)] hover:bg-status-ai/18">
+            <Bot className="h-4 w-4" /> Abrir Assistente IA <ArrowRight className="h-4 w-4" />
+          </Link>
+        </aside>
+      </section>
+
+      <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <InfoFooter icon={CalendarDays} label="Período analisado" value={cfg.analyzed.split(" até ")[0]} detail={`até ${cfg.analyzed.split(" até ")[1]}`} />
+        <InfoFooter icon={LineChart} label="Cobertura das leituras" value={period === "month" ? "96%" : period === "week" ? "97%" : "98%"} detail={period === "d1" ? "+2 pp vs ontem" : `comparado ao período anterior`} />
+        <InfoFooter icon={Database} label="Dados coletados" value="100%" detail="Qualidade dos dados tratados" />
+        <InfoFooter icon={Clock3} label="Próxima atualização" value="09:00" detail="Em 45 min" />
       </section>
     </div>
   );
