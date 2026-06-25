@@ -20,7 +20,9 @@ import {
   Wrench,
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
-import chillerImage from "@/assets/chiller.png";
+import chillerBlue from "@/assets/chiller-blue.png";
+import chillerRed from "@/assets/chiller-red.png";
+import chillerWhite from "@/assets/chiller-white.png";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -547,6 +549,12 @@ const chillerAccent = {
   branco: "oklch(0.9 0.02 240)",
 };
 
+const chillerImages = {
+  azul: chillerBlue,
+  vermelho: chillerRed,
+  branco: chillerWhite,
+};
+
 function Delta({ tone, value }: { tone: "up" | "down" | "neutral"; value: string }) {
   const classes =
     tone === "up"
@@ -635,12 +643,13 @@ function RecommendationRow({ index, item }: { index: number; item: { title: stri
 
 function ChillerStatusCard({ item, comparison }: { item: (typeof periodData)[PeriodKey]["chillers"][number]; comparison: string }) {
   const color = chillerAccent[item.id];
+  const image = chillerImages[item.id];
   const isWarn = item.tone === "warn";
   return (
     <Link
       to="/chillers/$id"
       params={{ id: item.id }}
-      className="group relative min-h-[206px] overflow-hidden rounded-xl border border-border/45 bg-surface-2/35 p-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/50"
+      className="group relative min-h-[252px] overflow-hidden rounded-xl border border-border/45 bg-surface-2/35 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/50"
     >
       <div className="pointer-events-none absolute inset-0 opacity-60" style={{ background: `radial-gradient(circle at 18% 38%, ${color.replace(")", " / 0.26)")}, transparent 36%)` }} />
       <div className="relative flex items-start justify-between gap-3">
@@ -650,18 +659,18 @@ function ChillerStatusCard({ item, comparison }: { item: (typeof periodData)[Per
         </div>
         <StatusPill tone={item.tone}>{item.status}</StatusPill>
       </div>
-      <div className="relative mt-4 grid grid-cols-[112px_minmax(0,1fr)] gap-4">
-        <div className="relative h-24 overflow-hidden rounded-xl border border-border/35 bg-black/20">
+      <div className="relative mt-5 grid grid-cols-[152px_minmax(0,1fr)] gap-5">
+        <div className="relative h-32 overflow-hidden rounded-xl border border-border/35 bg-black/20">
           <div className="absolute inset-0 opacity-70" style={{ background: `radial-gradient(circle at 50% 50%, ${color.replace(")", " / 0.36)")}, transparent 70%)` }} />
-          <img src={chillerImage} alt={item.name} className="absolute bottom-1 left-1/2 h-24 -translate-x-1/2 object-contain drop-shadow-[0_12px_18px_rgba(0,0,0,0.45)]" />
+          <img src={image} alt={item.name} className="absolute bottom-1 left-1/2 h-32 max-w-[150%] -translate-x-1/2 object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.55)] transition-transform duration-500 group-hover:scale-[1.05]" />
         </div>
-        <div className="space-y-2 text-xs">
+        <div className="space-y-3 text-xs">
           <div className="flex justify-between gap-2"><span className="text-muted-foreground">Horas de operação</span><strong>{item.hours}</strong></div>
           <div className="flex justify-between gap-2"><span className="text-muted-foreground">Delta T médio</span><strong className={isWarn ? "text-status-crit" : ""}>{item.deltaT}</strong></div>
           <div className="flex justify-between gap-2"><span className="text-muted-foreground">Setpoint atingido</span><strong className={isWarn ? "text-status-crit" : ""}>{item.setpoint}</strong></div>
         </div>
       </div>
-      <div className="relative mt-3 border-t border-border/35 pt-3">
+      <div className="relative mt-4 border-t border-border/35 pt-3">
         <div className={cn("font-mono text-[11px]", isWarn ? "text-status-crit" : "text-status-ok")}>{item.compare}</div>
         <div className={cn("mt-2 inline-flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px]", isWarn ? "border-status-warn/35 bg-status-warn/10 text-status-warn" : "border-status-ok/35 bg-status-ok/10 text-status-ok")}>
           {isWarn ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
@@ -712,8 +721,9 @@ function Index() {
 
       <section className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
-          <h1 className="font-display text-3xl font-bold tracking-tight md:text-4xl">Bom dia! <span aria-hidden>👋</span></h1>
-          <p className="mt-1 text-sm text-muted-foreground md:text-base">Visão geral da operação dos chillers e bombas.</p>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-primary/80">Centro de Inteligência Operacional</div>
+          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight md:text-4xl">Visão Operacional da Central</h1>
+          <p className="mt-1 text-sm text-muted-foreground md:text-base">Resumo consolidado de chillers, bombas e ocorrências operacionais.</p>
         </div>
         <div className="flex flex-col gap-3 lg:items-end">
           <div>
@@ -782,14 +792,12 @@ function Index() {
         <div className="glass-card overflow-hidden p-4">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="font-display text-base font-bold uppercase tracking-wide">Status dos chillers</h2>
-            <span className="text-xs text-muted-foreground">3 unidades · 6 circuitos</span>
+            <span className="text-xs text-muted-foreground">Clique em um chiller para abrir o detalhe</span>
           </div>
           <div className="grid gap-3 lg:grid-cols-3">
             {data.chillers.map((item) => <ChillerStatusCard key={item.id} item={item} comparison={cfg.comparison} />)}
           </div>
-          <Link to="/chillers" className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/25 bg-primary/5 px-4 py-2 text-sm font-semibold text-primary hover:bg-primary/10">
-            Ver todos os chillers <ArrowRight className="h-4 w-4" />
-          </Link>
+
         </div>
 
         <aside className="glass-card relative overflow-hidden border-status-ai/45 p-5 shadow-[0_0_42px_oklch(0.75_0.24_300_/_0.14)]">
@@ -831,7 +839,7 @@ function Index() {
         <InfoFooter icon={CalendarDays} label="Período analisado" value={cfg.analyzed.split(" até ")[0]} detail={`até ${cfg.analyzed.split(" até ")[1]}`} />
         <InfoFooter icon={LineChart} label="Cobertura das leituras" value={period === "month" ? "96%" : period === "week" ? "97%" : "98%"} detail={period === "d1" ? "+2 pp vs ontem" : `comparado ao período anterior`} />
         <InfoFooter icon={Database} label="Dados coletados" value="100%" detail="Qualidade dos dados tratados" />
-        <InfoFooter icon={Clock3} label="Próxima atualização" value="09:00" detail="Em 45 min" />
+        <InfoFooter icon={Clock3} label="Atualização dos dados" value="07:00" detail="Diariamente pela manhã" />
       </section>
     </div>
   );
