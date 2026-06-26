@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -19,8 +19,6 @@ import {
 import {
   Activity,
   BatteryCharging,
-  CalendarDays,
-  ChevronDown,
   Download,
   Droplets,
   Filter,
@@ -266,9 +264,10 @@ function distributionData(context: ContextKey) {
     { name: "> 4,0 °C", value: 16, fill: "#38bdf8" },
   ];
   if (context === "capacity") return [
-    { name: "Baixa", value: 20, fill: "#fb2d5c" },
-    { name: "Moderada", value: 35, fill: "#facc15" },
-    { name: "Alta", value: 45, fill: "#22c55e" },
+    { name: "< 40%", value: 20, fill: "#fb2d5c" },
+    { name: "40 - 60%", value: 35, fill: "#facc15" },
+    { name: "60 - 80%", value: 30, fill: "#22c55e" },
+    { name: "> 80%", value: 15, fill: "#38bdf8" },
   ];
   if (context === "pressure") return [
     { name: "Abaixo", value: 24, fill: "#facc15" },
@@ -285,6 +284,20 @@ function distributionData(context: ContextKey) {
     { name: "Ponta", value: 30, fill: "#facc15" },
     { name: "Anomalia", value: 20, fill: "#fb2d5c" },
   ];
+}
+
+function distributionTitle(context: ContextKey) {
+  if (context === "water") return "Distribuição Operacional — Delta T";
+  if (context === "capacity") return "Distribuição Operacional — Capacidade";
+  if (context === "pressure") return "Distribuição Operacional — Pressões";
+  if (context === "pumps") return "Distribuição Operacional — Bypass";
+  return "Distribuição Operacional — Consumo";
+}
+
+function totalHours(period: PeriodKey) {
+  if (period === "d1") return 24;
+  if (period === "week") return 168;
+  return 720;
 }
 
 function insights(context: ContextKey) {
@@ -338,16 +351,34 @@ function MiniKpi({ label, value, unit, delta, color, icon: Icon }: { label: stri
   );
 }
 
+function globalToLocalPeriod(value: string | null): PeriodKey {
+  if (value === "7d") return "week";
+  if (value === "1m") return "month";
+  return "d1";
+}
+
 function TrendsPage() {
   const [context, setContext] = useState<ContextKey>("water");
-  const [period, setPeriod] = useState<PeriodKey>("week");
+  const [period, setPeriod] = useState<PeriodKey>(() => {
+    if (typeof window === "undefined") return "d1";
+    return globalToLocalPeriod(window.localStorage.getItem("cag-period"));
+  });
   const [group, setGroup] = useState<GroupKey>("all");
+
+  useEffect(() => {
+    const onPeriodChange = (event: Event) => {
+      const value = (event as CustomEvent<string>).detail;
+      setPeriod(globalToLocalPeriod(value));
+    };
+    window.addEventListener("cag-period-change", onPeriodChange);
+    return () => window.removeEventListener("cag-period-change", onPeriodChange);
+  }, []);
   const activeContext = contextConfig[context];
-  const activePeriod = periodOptions.find((p) => p.key === period) || periodOptions[1];
   const data = useMemo(() => buildTrendRows(period, group), [period, group]);
   const metric = metricValue(context, data);
   const comparison = comparisonData(context, group);
   const distribution = distributionData(context);
+  const hours = totalHours(period);
   const periodLabel = period === "d1" ? "24 horas" : period === "week" ? "7 dias" : "30 dias";
 
   return (
@@ -377,7 +408,7 @@ function TrendsPage() {
               type="button"
               onClick={() => setContext(key)}
               className={cn(
-                "group glass-card flex items-center gap-4 p-4 text-left transition-all",
+                "group glass-card flex items-center gap-4 p-4 text-left transition-all hover:text-white",
                 active && "border-violet-400/65 bg-violet-500/18 shadow-[0_0_28px_rgba(168,85,247,0.18)]",
               )}
             >
@@ -385,8 +416,8 @@ function TrendsPage() {
                 <Icon className="h-5 w-5" />
               </div>
               <div>
-                <div className="font-display text-sm font-semibold">{item.label}</div>
-                <div className="mt-0.5 text-[11px] text-muted-foreground">{item.subtitle}</div>
+                <div className="font-display text-sm font-semibold group-hover:text-white">{item.label}</div>
+                <div className="mt-0.5 text-[11px] text-muted-foreground group-hover:text-white/80">{item.subtitle}</div>
               </div>
             </button>
           );
@@ -394,24 +425,17 @@ function TrendsPage() {
       </div>
 
       <div className="glass-card p-4">
-        <div className="grid gap-4 lg:grid-cols-[1.1fr_1fr_1.2fr_auto]">
-          <div>
-            <div className="text-xs text-muted-foreground">Período</div>
-            <div className="mt-1 flex items-center justify-between rounded-lg border border-border/60 bg-background/35 px-3 py-2 text-sm">
-              <span className="inline-flex items-center gap-2"><CalendarDays className="h-4 w-4 text-primary" /> {activePeriod.label} ({activePeriod.date})</span>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            </div>
-          </div>
-          <div>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-[360px] flex-1">
             <div className="text-xs text-muted-foreground">Grupo</div>
-            <div className="mt-1 grid grid-cols-4 gap-2">
+            <div className="mt-1 grid max-w-[520px] grid-cols-4 gap-2">
               {groups.map((g) => (
                 <button
                   key={g.key}
                   type="button"
                   onClick={() => setGroup(g.key)}
                   className={cn(
-                    "rounded-lg border border-border/60 bg-background/35 px-3 py-2 text-xs font-semibold text-muted-foreground transition",
+                    "rounded-lg border border-border/60 bg-background/35 px-3 py-2 text-xs font-semibold text-muted-foreground transition hover:border-violet-400/50 hover:bg-violet-500/15 hover:text-white",
                     group === g.key && "border-violet-400/50 bg-violet-500/20 text-violet-100",
                   )}
                 >
@@ -420,19 +444,10 @@ function TrendsPage() {
               ))}
             </div>
           </div>
-          <div>
-            <div className="text-xs text-muted-foreground">Comparar com</div>
-            <div className="mt-1 flex items-center justify-between rounded-lg border border-border/60 bg-background/35 px-3 py-2 text-sm">
-              <span className="inline-flex items-center gap-2"><CalendarDays className="h-4 w-4 text-violet-300" /> Período anterior equivalente</span>
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            </div>
-          </div>
-          <div className="flex items-end">
-            <button className="inline-flex h-10 items-center gap-2 rounded-lg bg-violet-500/20 px-5 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/25">
-              <Filter className="h-4 w-4" />
-              Aplicar filtros
-            </button>
-          </div>
+          <button className="inline-flex h-10 items-center gap-2 rounded-lg bg-violet-500/20 px-5 text-sm font-semibold text-violet-200 transition hover:bg-violet-500/30 hover:text-white">
+            <Filter className="h-4 w-4" />
+            Aplicar filtros
+          </button>
         </div>
       </div>
 
@@ -455,10 +470,10 @@ function TrendsPage() {
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <span>Exibição</span>
             <span className="rounded-lg bg-violet-500/25 px-3 py-1.5 font-semibold text-violet-100">Linha</span>
-            <span className="rounded-lg border border-border/60 px-3 py-1.5">Área</span>
+            <span className="rounded-lg border border-border/60 px-3 py-1.5 hover:text-white">Área</span>
             <span className="ml-2">Intervalo</span>
             <span className="rounded-lg border border-border/60 px-3 py-1.5">{periodLabel}</span>
-            <button className="grid h-8 w-8 place-items-center rounded-lg border border-border/60 text-muted-foreground hover:text-foreground"><Maximize2 className="h-4 w-4" /></button>
+            <button className="grid h-8 w-8 place-items-center rounded-lg border border-border/60 text-muted-foreground hover:text-white"><Maximize2 className="h-4 w-4" /></button>
           </div>
         </div>
         <div className="h-[315px] w-full">
@@ -505,7 +520,7 @@ function TrendsPage() {
 
       <div className="grid gap-4 xl:grid-cols-[1.05fr_1fr_1fr]">
         <div className="glass-card p-4">
-          <h3 className="font-display text-sm font-bold uppercase tracking-[0.12em]">Insights do Período</h3>
+          <h3 className="font-display text-sm font-bold uppercase tracking-[0.12em]">Insights Inteligentes do Período</h3>
           <div className="mt-4 space-y-2">
             {insights(context).map((text, index) => (
               <div key={text} className="flex items-center gap-3 rounded-lg border border-border/40 bg-background/30 px-3 py-3 text-sm text-muted-foreground">
@@ -535,33 +550,50 @@ function TrendsPage() {
         </div>
 
         <div className="glass-card p-4">
-          <h3 className="font-display text-sm font-bold uppercase tracking-[0.12em]">Distribuição do Indicador</h3>
-          <p className="text-[11px] text-muted-foreground">Faixas do período analisado</p>
-          <div className="mt-4 grid grid-cols-[170px_1fr] items-center gap-3">
-            <div className="h-[180px]">
+          <h3 className="font-display text-sm font-bold uppercase tracking-[0.12em]">{distributionTitle(context)}</h3>
+          <p className="text-[11px] text-muted-foreground">Horas classificadas no período selecionado</p>
+          <div className="mt-4 grid grid-cols-[180px_1fr] items-center gap-4">
+            <div className="relative h-[190px]">
               <ResponsiveContainer>
                 <PieChart>
-                  <Pie data={distribution} innerRadius={48} outerRadius={76} paddingAngle={2} dataKey="value">
+                  <Pie data={distribution} innerRadius={52} outerRadius={82} paddingAngle={2} dataKey="value">
                     {distribution.map((entry) => <Cell key={entry.name} fill={entry.fill} />)}
                   </Pie>
-                  <Tooltip contentStyle={tooltipStyle} />
+                  <Tooltip
+                    contentStyle={tooltipStyle}
+                    formatter={(value: any, name: any) => {
+                      const pct = Number(value);
+                      return [`${pct}% (${Math.round((pct / 100) * hours)} h)`, name];
+                    }}
+                  />
                 </PieChart>
               </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
+                <div>
+                  <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Total</div>
+                  <div className="font-display text-2xl font-bold text-foreground">{hours} h</div>
+                  <div className="text-[10px] text-muted-foreground">analisadas</div>
+                </div>
+              </div>
             </div>
             <div className="space-y-3">
-              {distribution.map((item) => (
-                <div key={item.name} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="inline-flex items-center gap-2 text-muted-foreground"><span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: item.fill }} />{item.name}</span>
-                  <span className="font-mono font-semibold text-foreground">{item.value}%</span>
-                </div>
-              ))}
+              {distribution.map((item) => {
+                const itemHours = Math.round((item.value / 100) * hours);
+                return (
+                  <div key={item.name} className="flex items-center justify-between gap-3 text-sm">
+                    <span className="inline-flex items-center gap-2 text-muted-foreground"><span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: item.fill }} />{item.name}</span>
+                    <span className="font-mono font-semibold text-foreground">{item.value}% <span className="text-muted-foreground">({itemHours} h)</span></span>
+                  </div>
+                );
+              })}
+              <p className="pt-2 text-xs text-muted-foreground">Quanto tempo o sistema operou em cada faixa operacional.</p>
             </div>
           </div>
         </div>
       </div>
 
       <div className="rounded-xl border border-border/50 bg-background/30 px-4 py-3 text-xs text-muted-foreground">
-        Os valores apresentados são calculados com base nos dados consolidados de 15 em 15 minutos e respeitam o período selecionado.
+        Os valores apresentados são calculados com base nos dados consolidados e respeitam o período global selecionado no topo da página.
       </div>
     </div>
   );

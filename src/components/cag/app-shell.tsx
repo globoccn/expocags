@@ -28,7 +28,10 @@ const nav = [
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [now, setNow] = useState("");
-  const [period, setPeriod] = useState("d1");
+  const [period, setPeriod] = useState(() => {
+    if (typeof window === "undefined") return "d1";
+    return window.localStorage.getItem("cag-period") || "d1";
+  });
 
   useEffect(() => {
     const tick = () => {
@@ -123,7 +126,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <button
                   key={p.value}
                   type="button"
-                  onClick={() => setPeriod(p.value)}
+                  onClick={() => {
+                    setPeriod(p.value);
+                    window.localStorage.setItem("cag-period", p.value);
+                    window.dispatchEvent(new CustomEvent("cag-period-change", { detail: p.value }));
+                  }}
                   className={cn(
                     "min-w-16 rounded-full px-3 py-1.5 font-semibold transition-all",
                     period === p.value
