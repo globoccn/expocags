@@ -132,7 +132,7 @@ export function HomeChillerCard({ chiller }: { chiller: ChillerData }) {
           alt={chiller.name}
           loading="lazy"
           draggable={false}
-          className="absolute bottom-3 left-1/2 z-10 h-[250px] w-auto max-w-[172%] -translate-x-1/2 object-contain transition-transform duration-500 group-hover:scale-[1.04]"
+          className="absolute bottom-6 left-1/2 z-10 h-[310px] w-auto max-w-[205%] -translate-x-1/2 object-contain transition-transform duration-500 group-hover:scale-[1.04]"
           style={{ filter: `drop-shadow(0 18px 22px ${halo}) drop-shadow(0 0 34px ${halo})` }}
         />
         <div
