@@ -1,8 +1,16 @@
 import { Link } from "@tanstack/react-router";
 import { AlertTriangle, CheckCircle2, Info, Sparkles } from "lucide-react";
-import chillerImage from "@/assets/chiller.png";
+import chillerBlue from "@/assets/chiller-blue.png";
+import chillerRed from "@/assets/chiller-red.png";
+import chillerWhite from "@/assets/chiller-white.png";
 import { chillerInsight, chillerTheme, type ChillerData } from "@/data/mockCagData";
 import { cn } from "@/lib/utils";
+
+const chillerImageById: Record<string, string> = {
+  blue: chillerBlue,
+  red: chillerRed,
+  white: chillerWhite,
+};
 
 const haloColor: Record<string, string> = {
   blue: "oklch(0.78 0.22 230 / 0.62)",
@@ -107,7 +115,7 @@ export function HomeChillerCard({ chiller }: { chiller: ChillerData }) {
         </span>
       </div>
 
-      <div className="relative z-0 mt-2 h-[222px] overflow-hidden rounded-xl border border-border/25 bg-black/10">
+      <div className="relative z-0 mt-2 h-[250px] overflow-hidden rounded-xl border border-border/25 bg-black/10">
         <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: `linear-gradient(90deg, transparent, ${halo.replace("0.62", "0.18")}, transparent)` }} />
         <div className="pointer-events-none absolute inset-0">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -118,13 +126,13 @@ export function HomeChillerCard({ chiller }: { chiller: ChillerData }) {
             />
           ))}
         </div>
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-56 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full blur-xl" style={{ background: `radial-gradient(closest-side, ${halo}, transparent 72%)` }} />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-64 w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-xl" style={{ background: `radial-gradient(closest-side, ${halo}, transparent 72%)` }} />
         <img
-          src={chillerImage}
+          src={chillerImageById[chiller.id] || chillerBlue}
           alt={chiller.name}
           loading="lazy"
           draggable={false}
-          className="absolute bottom-3 left-1/2 z-10 h-[215px] w-auto max-w-[132%] -translate-x-1/2 object-contain transition-transform duration-500 group-hover:scale-[1.04]"
+          className="absolute bottom-3 left-1/2 z-10 h-[250px] w-auto max-w-[172%] -translate-x-1/2 object-contain transition-transform duration-500 group-hover:scale-[1.04]"
           style={{ filter: `drop-shadow(0 18px 22px ${halo}) drop-shadow(0 0 34px ${halo})` }}
         />
         <div

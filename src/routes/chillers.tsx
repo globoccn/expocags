@@ -281,7 +281,7 @@ function ChillersPage() {
       <section className={cn("glass-card overflow-hidden border p-0", color.border, color.glow)}>
         <div className={cn("grid gap-0 bg-gradient-to-r p-5", color.soft, "xl:grid-cols-[1.05fr_1.1fr_0.72fr]")}> 
           <div className="flex items-center gap-5 border-b border-border/40 pb-5 xl:border-b-0 xl:border-r xl:pb-0 xl:pr-5">
-            <div className="relative grid h-36 w-60 shrink-0 place-items-center overflow-hidden rounded-2xl bg-black/10">
+            <div className="relative grid h-44 w-80 shrink-0 place-items-center overflow-hidden rounded-2xl bg-black/10">
               <div className={cn("absolute inset-0 bg-gradient-to-br opacity-70", color.soft)} />
               <img src={chillerImages[active.id]} alt={active.name} className="relative z-10 h-full w-full object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.35)]" />
             </div>
