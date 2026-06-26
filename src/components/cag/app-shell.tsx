@@ -21,7 +21,7 @@ const nav = [
   { to: "/ai", label: "Análise IA", icon: Brain },
   { to: "/trends", label: "Tendências", icon: BarChart3 },
   { to: "/alarms", label: "Alarmes", icon: AlertTriangle },
-  { to: "/reports", label: "Relatórios", icon: FileText },
+  { to: "/reports", label: "Relatórios Hidrômetros", icon: FileText },
   { to: "/settings", label: "Configurações", icon: Settings },
 ] as const;
 

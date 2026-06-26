@@ -27,7 +27,6 @@ import {
   Snowflake,
   Thermometer,
   TrendingDown,
-  Zap,
 } from "lucide-react";
 import { chillers, type ChillerData, type ChillerId } from "@/data/mockCagData";
 import { chartColors, tooltipStyle } from "@/components/cag/chart-wrap";
@@ -39,7 +38,7 @@ export const Route = createFileRoute("/trends")({
 });
 
 type PeriodKey = "d1" | "week" | "month";
-type ContextKey = "water" | "capacity" | "pressure" | "pumps" | "consumption";
+type ContextKey = "water" | "capacity" | "pressure" | "pumps";
 type GroupKey = "all" | ChillerId;
 
 const periodOptions: Array<{ key: PeriodKey; label: string; date: string; range: string; points: number }> = [
@@ -104,16 +103,6 @@ const contextConfig: Record<ContextKey, {
     unit: "bar / %",
     yDomain: [0, 100],
     yTicks: [0, 25, 50, 75, 100],
-  },
-  consumption: {
-    label: "Consumo",
-    subtitle: "Energia elétrica estimada",
-    icon: Zap,
-    accent: "text-amber-300",
-    title: "Consumo — Energia estimada do sistema",
-    unit: "kWh",
-    yDomain: [0, 1200],
-    yTicks: [0, 300, 600, 900, 1200],
   },
 };
 
@@ -195,7 +184,6 @@ function buildTrendRows(period: PeriodKey, group: GroupKey) {
       setpointPressao: Number((avg(rows.map((r) => r.pressureSetpoint)) * 20).toFixed(1)),
       bypass: Number(avg(rows.map((r) => r.bypass)).toFixed(1)),
       bombasOperando: Number((avg(rows.map((r) => r.pumpsOn)) * 25).toFixed(1)),
-      consumo: Number((avg(rows.map((r) => r.capTotal)) * 8.8 + Math.max(0, wave) * 80).toFixed(1)),
     };
   });
 }
@@ -225,9 +213,6 @@ const trendLines: Record<ContextKey, Array<{ key: string; label: string; color: 
     { key: "bypass", label: "Bypass (%)", color: "#facc15" },
     { key: "bombasOperando", label: "Bombas operando (%)", color: "#22c55e" },
   ],
-  consumption: [
-    { key: "consumo", label: "Consumo estimado (kWh)", color: "#facc15" },
-  ],
 };
 
 function metricValue(context: ContextKey, data: any[]) {
@@ -235,8 +220,7 @@ function metricValue(context: ContextKey, data: any[]) {
   if (context === "water") return { main: avg(data.map((d) => d.deltaT)), label: "Delta T médio", unit: "°C", color: "text-yellow-300" };
   if (context === "capacity") return { main: avg(data.map((d) => d.capacidadeTotal)), label: "Capacidade média", unit: "%", color: "text-cyan-300" };
   if (context === "pressure") return { main: avg(data.map((d) => d.descargaA)), label: "Descarga média A", unit: "psi", color: "text-rose-300" };
-  if (context === "pumps") return { main: last.bypass || 0, label: "Bypass atual", unit: "%", color: "text-yellow-300" };
-  return { main: avg(data.map((d) => d.consumo)), label: "Consumo médio", unit: "kWh", color: "text-amber-300" };
+  return { main: last.bypass || 0, label: "Bypass atual", unit: "%", color: "text-yellow-300" };
 }
 
 function comparisonData(context: ContextKey, group: GroupKey) {
@@ -250,10 +234,7 @@ function comparisonData(context: ContextKey, group: GroupKey) {
   if (context === "pressure") {
     return source.map((c) => ({ name: c.name.replace("Chiller ", ""), value: Math.round(avg(c.series.pressureHigh.map((p) => p.a * 50))), fill: c.id === "red" ? "#fb2d5c" : c.id === "blue" ? "#38bdf8" : "#e5e7eb" }));
   }
-  if (context === "pumps") {
-    return source.map((c) => ({ name: c.name.replace("Chiller ", ""), value: c.hydraulic.bypassValve, fill: c.id === "red" ? "#fb2d5c" : c.id === "blue" ? "#38bdf8" : "#e5e7eb" }));
-  }
-  return source.map((c) => ({ name: c.name.replace("Chiller ", ""), value: Math.round(c.capacityTotal * 8.8), fill: c.id === "red" ? "#fb2d5c" : c.id === "blue" ? "#38bdf8" : "#e5e7eb" }));
+  return source.map((c) => ({ name: c.name.replace("Chiller ", ""), value: c.hydraulic.bypassValve, fill: c.id === "red" ? "#fb2d5c" : c.id === "blue" ? "#38bdf8" : "#e5e7eb" }));
 }
 
 function distributionData(context: ContextKey) {
@@ -274,15 +255,10 @@ function distributionData(context: ContextKey) {
     { name: "Normal", value: 62, fill: "#22c55e" },
     { name: "Elevada", value: 14, fill: "#fb2d5c" },
   ];
-  if (context === "pumps") return [
+  return [
     { name: "Bypass baixo", value: 42, fill: "#22c55e" },
     { name: "Bypass médio", value: 35, fill: "#facc15" },
     { name: "Bypass alto", value: 23, fill: "#fb2d5c" },
-  ];
-  return [
-    { name: "Base", value: 50, fill: "#38bdf8" },
-    { name: "Ponta", value: 30, fill: "#facc15" },
-    { name: "Anomalia", value: 20, fill: "#fb2d5c" },
   ];
 }
 
@@ -290,8 +266,7 @@ function distributionTitle(context: ContextKey) {
   if (context === "water") return "Distribuição Operacional — Delta T";
   if (context === "capacity") return "Distribuição Operacional — Capacidade";
   if (context === "pressure") return "Distribuição Operacional — Pressões";
-  if (context === "pumps") return "Distribuição Operacional — Bypass";
-  return "Distribuição Operacional — Consumo";
+  return "Distribuição Operacional — Bypass";
 }
 
 function totalHours(period: PeriodKey) {
@@ -319,17 +294,11 @@ function insights(context: ContextKey) {
     "As pressões de óleo permaneceram dentro da faixa operacional simulada.",
     "Os maiores desvios ocorreram no período de maior carga térmica.",
   ];
-  if (context === "pumps") return [
+  return [
     "A pressão da linha ficou abaixo do setpoint em parte do período.",
     "O bypass elevado acompanhou os momentos de menor Delta T.",
     "O grupo Vermelho concentrou os principais pontos de atenção hidráulica.",
     "As bombas permaneceram em modo remoto na maior parte do período.",
-  ];
-  return [
-    "O consumo estimado acompanhou a variação de capacidade dos chillers.",
-    "O maior consumo ocorreu durante o período de maior demanda térmica.",
-    "Não foram identificados picos isolados fora do padrão esperado.",
-    "A distribuição de consumo segue coerente com o perfil operacional.",
   ];
 }
 
@@ -397,7 +366,7 @@ function TrendsPage() {
         </button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {(Object.keys(contextConfig) as ContextKey[]).map((key) => {
           const item = contextConfig[key];
           const Icon = item.icon;
@@ -490,7 +459,7 @@ function TrendsPage() {
                 axisLine={false}
                 tickFormatter={(v) => `${v}${activeContext.unit === "°C" ? "°C" : ""}`}
               />
-              <Tooltip contentStyle={tooltipStyle} formatter={(value: any, name: any) => [`${fmt(Number(value), activeContext.unit === "psi" || activeContext.unit === "kWh" ? 0 : 1)} ${activeContext.unit}`, name]} />
+              <Tooltip contentStyle={tooltipStyle} formatter={(value: any, name: any) => [`${fmt(Number(value), activeContext.unit === "psi" ? 0 : 1)} ${activeContext.unit}`, name]} />
               {trendLines[context].map((line) => (
                 <Line
                   key={line.key}
@@ -510,11 +479,11 @@ function TrendsPage() {
       </div>
 
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-        <MiniKpi label={metric.label} value={fmt(metric.main, context === "pressure" || context === "consumption" ? 0 : 1)} unit={metric.unit} delta="▼ 14% vs período anterior" color={metric.color} icon={TrendingDown} />
+        <MiniKpi label={metric.label} value={fmt(metric.main, context === "pressure" ? 0 : 1)} unit={metric.unit} delta="▼ 14% vs período anterior" color={metric.color} icon={TrendingDown} />
         <MiniKpi label="Setpoint atingido" value="68" unit="%" delta="▼ 9% vs período anterior" color="text-violet-300" icon={BatteryCharging} />
         <MiniKpi label="Temp. entrada média" value="24,7" unit="°C" delta="▲ 2% vs período anterior" color="text-sky-300" icon={Thermometer} />
         <MiniKpi label="Temp. saída média" value="7,9" unit="°C" delta="▼ 1% vs período anterior" color="text-cyan-300" icon={Thermometer} />
-        <MiniKpi label="Máxima variação" value={context === "pressure" ? "82" : "1,4"} unit={context === "pressure" ? "psi" : context === "consumption" ? "kWh" : "°C"} delta="18/06 às 14:00" color="text-yellow-300" icon={Activity} />
+        <MiniKpi label="Máxima variação" value={context === "pressure" ? "82" : "1,4"} unit={context === "pressure" ? "psi" : context === "pumps" ? "%" : "°C"} delta="18/06 às 14:00" color="text-yellow-300" icon={Activity} />
         <MiniKpi label="Horas fora do padrão" value="8,6" unit="h" delta="▲ 23% vs período anterior" color="text-rose-300" icon={Gauge} />
       </div>
 
