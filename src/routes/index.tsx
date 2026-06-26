@@ -659,11 +659,11 @@ function ChillerStatusCard({ item, comparison }: { item: (typeof periodData)[Per
         </div>
         <StatusPill tone={item.tone}>{item.status}</StatusPill>
       </div>
-      <div className="relative mt-5 grid grid-cols-[136px_minmax(0,1fr)] gap-5">
-        <div className="relative h-32 overflow-hidden rounded-xl border border-border/35 bg-black/20">
-          <div className="absolute inset-0 opacity-70" style={{ background: `radial-gradient(circle at 50% 50%, ${color.replace(")", " / 0.34)")}, transparent 72%)` }} />
-          <div className="absolute inset-x-4 bottom-3 h-6 rounded-[50%] bg-black/35 blur-sm" />
-          <img src={image} alt={item.name} className="absolute inset-0 m-auto max-h-[104px] w-[92%] object-contain drop-shadow-[0_14px_22px_rgba(0,0,0,0.58)] transition-transform duration-500 group-hover:scale-[1.035]" />
+      <div className="relative mt-4 grid grid-cols-[190px_minmax(0,1fr)] gap-5">
+        <div className="relative h-40 overflow-visible rounded-xl border border-border/35 bg-black/20">
+          <div className="absolute inset-0 rounded-xl opacity-70" style={{ background: `radial-gradient(circle at 50% 52%, ${color.replace(")", " / 0.34)")}, transparent 72%)` }} />
+          <div className="absolute inset-x-3 bottom-4 h-7 rounded-[50%] bg-black/35 blur-sm" />
+          <img src={image} alt={item.name} className="absolute left-1/2 top-1/2 z-10 h-[150px] w-[112%] max-w-none -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.62)] transition-transform duration-500 group-hover:scale-[1.04]" />
         </div>
         <div className="space-y-3 text-xs">
           <div className="flex justify-between gap-2"><span className="text-muted-foreground">Horas de operação</span><strong>{item.hours}</strong></div>
