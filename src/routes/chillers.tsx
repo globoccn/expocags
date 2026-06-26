@@ -185,6 +185,25 @@ function trendPeriodLabel(period: PeriodKey) {
   return "30 dias";
 }
 
+function trendYAxisConfig(context: TrendContext) {
+  if (context === "water") {
+    return {
+      domain: [0, 16] as [number, number],
+      ticks: [0, 4, 8, 12, 16],
+    };
+  }
+  if (context === "capacity") {
+    return {
+      domain: [0, 100] as [number, number],
+      ticks: [0, 25, 50, 75, 100],
+    };
+  }
+  return {
+    domain: [0, 900] as [number, number],
+    ticks: [0, 225, 450, 675, 900],
+  };
+}
+
 function ChillersPage() {
   const [activeId, setActiveId] = useState<ChillerId>("blue");
   const [period, setPeriod] = useState<PeriodKey>("d1");
@@ -194,6 +213,7 @@ function ChillersPage() {
   const status = chillerStatus(active);
   const trendData = useMemo(() => buildTrendData(active, period), [active, period]);
   const activeTrend = trendContexts[trendContext];
+  const activeYAxis = trendYAxisConfig(trendContext);
   const color = chillerColors[active.id];
 
   return (
@@ -366,9 +386,10 @@ function ChillersPage() {
                   tick={{ fill: "#94a3b8", fontSize: 10 }}
                   tickLine={false}
                   axisLine={false}
-                  width={34}
-                  unit={activeTrend.unit}
-                  domain={trendContext === "capacity" ? [0, 100] : ["auto", "auto"]}
+                  width={44}
+                  domain={activeYAxis.domain}
+                  ticks={activeYAxis.ticks}
+                  tickFormatter={(value) => `${value} ${activeTrend.unit}`}
                 />
                 <Tooltip
                   contentStyle={{
@@ -397,10 +418,6 @@ function ChillersPage() {
               </ReLineChart>
             </ResponsiveContainer>
           </div>
-          <button className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-status-ai/40 bg-status-ai/8 px-4 py-2 text-sm font-semibold text-status-ai transition hover:bg-status-ai/12">
-            Ver mais tendências
-            <ArrowRight className="h-4 w-4" />
-          </button>
         </div>
 
         <div className="glass-card p-5">
