@@ -22,8 +22,19 @@ import {
 import chillerBlue from "@/assets/chiller-blue.png";
 import chillerRed from "@/assets/chiller-red.png";
 import chillerWhite from "@/assets/chiller-white.png";
-import { aiInsights, chillerTheme, chillers as mockChillers, events, type ChillerData, type ChillerId } from "@/data/mockCagData";
-import { mergeChillersFromDashboard, useDashboardPeriod } from "@/lib/cag-dashboard-api";
+import {
+  aiInsights,
+  chillerTheme,
+  chillers as mockChillers,
+  events,
+  type ChillerData,
+  type ChillerId,
+} from "@/data/mockCagData";
+import {
+  mergeChillersFromDashboard,
+  useDashboardPeriod,
+  type UiPeriod,
+} from "@/lib/cag-dashboard-api";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/chillers")({
@@ -46,7 +57,10 @@ const chillerImages: Record<ChillerId, string> = {
   white: chillerWhite,
 };
 
-const chillerColors: Record<ChillerId, { dot: string; text: string; border: string; glow: string; soft: string }> = {
+const chillerColors: Record<
+  ChillerId,
+  { dot: string; text: string; border: string; glow: string; soft: string }
+> = {
   blue: {
     dot: "bg-sky-400",
     text: "text-sky-300",
@@ -71,7 +85,10 @@ const chillerColors: Record<ChillerId, { dot: string; text: string; border: stri
 };
 
 function fmt(value: number, digits = 1) {
-  return value.toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
 }
 
 function psi(value: number) {
@@ -79,9 +96,19 @@ function psi(value: number) {
 }
 
 function chillerStatus(chiller: ChillerData) {
-  if (chiller.risk === "ok") return { label: "Normal", tone: "ok" as const, occurrence: "Sem ocorrências relevantes" };
-  if (chiller.risk === "info") return { label: "Normal", tone: "info" as const, occurrence: "Operação estável em acompanhamento" };
-  return { label: "Atenção", tone: "warn" as const, occurrence: chiller.activeAlarms[0] || "Ponto de atenção operacional" };
+  if (chiller.risk === "ok")
+    return { label: "Normal", tone: "ok" as const, occurrence: "Sem ocorrências relevantes" };
+  if (chiller.risk === "info")
+    return {
+      label: "Normal",
+      tone: "info" as const,
+      occurrence: "Operação estável em acompanhamento",
+    };
+  return {
+    label: "Atenção",
+    tone: "warn" as const,
+    occurrence: chiller.activeAlarms[0] || "Ponto de atenção operacional",
+  };
 }
 
 function circuitSummary(chiller: ChillerData, circuitId: "A" | "B") {
@@ -95,7 +122,11 @@ function circuitSummary(chiller: ChillerData, circuitId: "A" | "B") {
     oil: hasAttention ? "Atenção" : "Normal",
     fans: "4/4",
     compressor1: circuit.compressor1Status === "on" ? "Operando" : "Standby",
-    compressor2: hasAttention ? "Atenção" : circuit.compressor2Status === "on" ? "Operando" : "Standby",
+    compressor2: hasAttention
+      ? "Atenção"
+      : circuit.compressor2Status === "on"
+        ? "Operando"
+        : "Standby",
     hasAttention,
   };
 }
@@ -108,7 +139,8 @@ function periodPointCount(period: PeriodKey) {
 
 function periodTickLabel(period: PeriodKey, index: number) {
   if (period === "d1") return `${String(index).padStart(2, "0")}h`;
-  if (period === "week") return [`D-6`, `D-5`, `D-4`, `D-3`, `D-2`, `D-1`, `Hoje`][index] || `D-${6 - index}`;
+  if (period === "week")
+    return [`D-6`, `D-5`, `D-4`, `D-3`, `D-2`, `D-1`, `Hoje`][index] || `D-${6 - index}`;
   return `${String(index + 1).padStart(2, "0")}/06`;
 }
 
@@ -146,7 +178,15 @@ function buildTrendData(chiller: ChillerData, period: PeriodKey) {
   });
 }
 
-const trendContexts: Record<TrendContext, { label: string; unit: string; subtitle: string; lines: Array<{ key: string; label: string; color: string; dashed?: boolean }> }> = {
+const trendContexts: Record<
+  TrendContext,
+  {
+    label: string;
+    unit: string;
+    subtitle: string;
+    lines: Array<{ key: string; label: string; color: string; dashed?: boolean }>;
+  }
+> = {
   water: {
     label: "Água Gelada",
     unit: "°C",
@@ -206,10 +246,18 @@ function trendYAxisConfig(context: TrendContext) {
 }
 
 function ChillersPage() {
-  const { data: apiPayload, loading, error } = useDashboardPeriod();
-  const chillers = useMemo(() => mergeChillersFromDashboard(apiPayload, mockChillers), [apiPayload]);
+  const { period: globalPeriod, data: apiPayload, loading, error } = useDashboardPeriod();
+  const chillers = useMemo(
+    () => mergeChillersFromDashboard(apiPayload, mockChillers),
+    [apiPayload],
+  );
   const [activeId, setActiveId] = useState<ChillerId>("blue");
-  const [period, setPeriod] = useState<PeriodKey>("d1");
+  const period: PeriodKey = globalPeriod === "7d" ? "week" : globalPeriod === "1m" ? "month" : "d1";
+  const setGlobalPeriod = (next: PeriodKey) => {
+    const ui = (next === "week" ? "7d" : next === "month" ? "1m" : "d1") as UiPeriod;
+    window.localStorage.setItem("cag-period", ui);
+    window.dispatchEvent(new CustomEvent("cag-period-change", { detail: ui }));
+  };
   const [trendContext, setTrendContext] = useState<TrendContext>("water");
   const active = chillers.find((c) => c.id === activeId) || chillers[0];
   const selectedPeriod = periodOptions.find((p) => p.key === period) || periodOptions[0];
@@ -224,7 +272,9 @@ function ChillersPage() {
       <section className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold tracking-tight">Chillers</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Resumo operacional dos grupos de água gelada</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Resumo operacional dos grupos de água gelada
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-surface-2/55 px-3 py-2 text-xs text-muted-foreground">
@@ -232,7 +282,9 @@ function ChillersPage() {
               <CalendarDays className="h-4 w-4" />
             </span>
             <span>
-              <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Atualização dos dados</span>
+              <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Atualização dos dados
+              </span>
               <span className="font-semibold text-foreground">Diariamente às 07:00</span>
             </span>
           </div>
@@ -240,11 +292,13 @@ function ChillersPage() {
             <span className="text-muted-foreground">Período analisado</span>
             <select
               value={period}
-              onChange={(e) => setPeriod(e.target.value as PeriodKey)}
+              onChange={(e) => setGlobalPeriod(e.target.value as PeriodKey)}
               className="rounded-lg border border-border/50 bg-background/65 px-3 py-1.5 font-semibold text-foreground outline-none"
             >
               {periodOptions.map((p) => (
-                <option key={p.key} value={p.key}>{p.label} · {p.date}</option>
+                <option key={p.key} value={p.key}>
+                  {p.label} · {p.date}
+                </option>
               ))}
             </select>
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -273,7 +327,12 @@ function ChillersPage() {
                     : "border-border/50 text-muted-foreground hover:border-primary/25 hover:text-foreground",
                 )}
               >
-                <span className={cn("h-3 w-3 rounded-full shadow-[0_0_16px_currentColor]", tabColor.dot)} />
+                <span
+                  className={cn(
+                    "h-3 w-3 rounded-full shadow-[0_0_16px_currentColor]",
+                    tabColor.dot,
+                  )}
+                />
                 <span className={activeTab ? tabColor.text : ""}>{chiller.name}</span>
               </button>
             );
@@ -282,29 +341,52 @@ function ChillersPage() {
       </section>
 
       <section className={cn("glass-card overflow-hidden border p-0", color.border, color.glow)}>
-        <div className={cn("grid gap-0 bg-gradient-to-r p-5", color.soft, "xl:grid-cols-[1.05fr_1.1fr_0.72fr]")}> 
+        <div
+          className={cn(
+            "grid gap-0 bg-gradient-to-r p-5",
+            color.soft,
+            "xl:grid-cols-[1.05fr_1.1fr_0.72fr]",
+          )}
+        >
           <div className="flex items-center gap-5 border-b border-border/40 pb-5 xl:border-b-0 xl:border-r xl:pb-0 xl:pr-5">
             <div className="relative grid h-44 w-80 shrink-0 place-items-center overflow-hidden rounded-2xl bg-black/10">
               <div className={cn("absolute inset-0 bg-gradient-to-br opacity-70", color.soft)} />
-              <img src={chillerImages[active.id]} alt={active.name} className="relative z-10 h-full w-full object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.35)]" />
+              <img
+                src={chillerImages[active.id]}
+                alt={active.name}
+                className="relative z-10 h-full w-full object-contain drop-shadow-[0_20px_30px_rgba(0,0,0,0.35)]"
+              />
             </div>
             <div className="min-w-0 flex-1">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Status geral</div>
-                  <h2 className={cn("font-display text-xl font-bold", color.text)}>{active.name}</h2>
+                  <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                    Status geral
+                  </div>
+                  <h2 className={cn("font-display text-xl font-bold", color.text)}>
+                    {active.name}
+                  </h2>
                 </div>
                 <StatusPill tone={status.tone}>{status.label}</StatusPill>
               </div>
               <div className="rounded-xl border border-border/45 bg-background/30 p-3">
-                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Principal ocorrência</div>
+                <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Principal ocorrência
+                </div>
                 <div className="mt-2 flex items-center gap-2 font-semibold">
-                  {status.tone === "ok" ? <CheckCircle2 className="h-4 w-4 text-status-ok" /> : <Info className="h-4 w-4 text-status-warn" />}
+                  {status.tone === "ok" ? (
+                    <CheckCircle2 className="h-4 w-4 text-status-ok" />
+                  ) : (
+                    <Info className="h-4 w-4 text-status-warn" />
+                  )}
                   <span>{status.occurrence}</span>
                 </div>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                <Metric label="Horas de operação" value={`${fmt(active.operatingHours / 1000, 1)} h`} />
+                <Metric
+                  label="Horas de operação"
+                  value={`${fmt(active.operatingHours / 1000, 1)} h`}
+                />
                 <Metric label="Última atualização" value="19/06/2026 06:55" />
               </div>
             </div>
@@ -315,10 +397,22 @@ function ChillersPage() {
             <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3">
               <Metric label="Saída média" value={`${fmt(active.feedTemp, 1)} °C`} />
               <Metric label="Entrada média" value={`${fmt(active.returnTemp, 1)} °C`} />
-              <Metric label="Delta T médio" value={`${fmt(active.deltaT, 1)} °C`} valueClassName={status.tone === "ok" ? "text-status-ok" : "text-status-crit"} />
+              <Metric
+                label="Delta T médio"
+                value={`${fmt(active.deltaT, 1)} °C`}
+                valueClassName={status.tone === "ok" ? "text-status-ok" : "text-status-crit"}
+              />
               <Metric label="Setpoint" value={`${fmt(active.setpoint, 1)} °C`} />
-              <Metric label="Setpoint atingido" value={active.id === "red" ? "18%" : active.id === "white" ? "88%" : "92%"} />
-              <Metric label="Vazão estimada" value={active.id === "red" ? "430 m³/h" : active.id === "white" ? "390 m³/h" : "410 m³/h"} />
+              <Metric
+                label="Setpoint atingido"
+                value={active.id === "red" ? "18%" : active.id === "white" ? "88%" : "92%"}
+              />
+              <Metric
+                label="Vazão estimada"
+                value={
+                  active.id === "red" ? "430 m³/h" : active.id === "white" ? "390 m³/h" : "410 m³/h"
+                }
+              />
             </div>
           </div>
 
@@ -347,7 +441,9 @@ function ChillersPage() {
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div>
                 <SectionTitle>Tendências Operacionais</SectionTitle>
-                <p className="mt-1 text-xs text-muted-foreground">{activeTrend.subtitle} · {trendPeriodLabel(period)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {activeTrend.subtitle} · {trendPeriodLabel(period)}
+                </p>
               </div>
               <div className="flex rounded-xl border border-border/45 bg-background/25 p-1 text-xs font-semibold">
                 {(Object.keys(trendContexts) as TrendContext[]).map((key) => (
@@ -369,7 +465,12 @@ function ChillersPage() {
             </div>
             <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
               {activeTrend.lines.map((line) => (
-                <Legend key={line.key} color={line.color} dashed={line.dashed} label={`${line.label} (${activeTrend.unit})`} />
+                <Legend
+                  key={line.key}
+                  color={line.color}
+                  dashed={line.dashed}
+                  label={`${line.label} (${activeTrend.unit})`}
+                />
               ))}
             </div>
           </div>
@@ -430,7 +531,10 @@ function ChillersPage() {
           </div>
           <div className="space-y-3">
             {recentEvents(active.id).map((event) => (
-              <div key={event.time + event.text} className="flex items-center gap-3 rounded-xl border border-border/35 bg-background/25 p-3 text-xs">
+              <div
+                key={event.time + event.text}
+                className="flex items-center gap-3 rounded-xl border border-border/35 bg-background/25 p-3 text-xs"
+              >
                 <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/12 text-primary">
                   <Info className="h-3.5 w-3.5" />
                 </span>
@@ -438,7 +542,9 @@ function ChillersPage() {
                   <div className="font-mono font-semibold text-foreground">{event.time}</div>
                   <div className="truncate text-muted-foreground">{event.text}</div>
                 </div>
-                <span className="rounded-full border border-status-info/30 bg-status-info/10 px-2 py-0.5 text-[10px] text-status-info">Informação</span>
+                <span className="rounded-full border border-status-info/30 bg-status-info/10 px-2 py-0.5 text-[10px] text-status-info">
+                  Informação
+                </span>
               </div>
             ))}
           </div>
@@ -449,8 +555,13 @@ function ChillersPage() {
           <div className="mt-6 flex min-h-48 flex-col justify-center gap-5">
             {recommendedActions(active).length ? (
               recommendedActions(active).map((action, index) => (
-                <div key={action} className="flex gap-3 rounded-xl border border-border/35 bg-background/25 p-3">
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary">{index + 1}</span>
+                <div
+                  key={action}
+                  className="flex gap-3 rounded-xl border border-border/35 bg-background/25 p-3"
+                >
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary">
+                    {index + 1}
+                  </span>
                   <p className="text-sm font-semibold">{action}</p>
                 </div>
               ))
@@ -458,7 +569,9 @@ function ChillersPage() {
               <div className="text-center">
                 <CheckCircle2 className="mx-auto h-7 w-7 text-status-ok" />
                 <p className="mt-3 font-semibold">Nenhuma ação crítica no momento</p>
-                <p className="mt-1 text-sm text-muted-foreground">Continue monitorando os parâmetros operacionais.</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Continue monitorando os parâmetros operacionais.
+                </p>
               </div>
             )}
           </div>
@@ -471,18 +584,27 @@ function ChillersPage() {
 
       <div className="glass-card flex items-center gap-3 px-5 py-3 text-xs text-muted-foreground">
         <Info className="h-4 w-4 text-primary" />
-        <span>Os dados apresentados são baseados no período selecionado: {selectedPeriod.label} ({selectedPeriod.date}).</span>
+        <span>
+          Os dados apresentados são baseados no período selecionado: {selectedPeriod.label} (
+          {selectedPeriod.date}).
+        </span>
       </div>
     </div>
   );
 }
 
 function StatusPill({ tone, children }: { tone: "ok" | "info" | "warn"; children: string }) {
-  const cls = tone === "ok" || tone === "info"
-    ? "border-status-ok/40 bg-status-ok/12 text-status-ok"
-    : "border-status-warn/45 bg-status-warn/12 text-status-warn";
+  const cls =
+    tone === "ok" || tone === "info"
+      ? "border-status-ok/40 bg-status-ok/12 text-status-ok"
+      : "border-status-warn/45 bg-status-warn/12 text-status-warn";
   return (
-    <span className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold", cls)}>
+    <span
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold",
+        cls,
+      )}
+    >
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
       {children}
     </span>
@@ -490,10 +612,22 @@ function StatusPill({ tone, children }: { tone: "ok" | "info" | "warn"; children
 }
 
 function SectionTitle({ children }: { children: string }) {
-  return <h3 className="font-display text-sm font-bold uppercase tracking-[0.12em] text-foreground/90">{children}</h3>;
+  return (
+    <h3 className="font-display text-sm font-bold uppercase tracking-[0.12em] text-foreground/90">
+      {children}
+    </h3>
+  );
 }
 
-function Metric({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
+function Metric({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
   return (
     <div className="rounded-xl border border-border/35 bg-background/20 p-3">
       <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
@@ -505,10 +639,17 @@ function Metric({ label, value, valueClassName }: { label: string; value: string
 function CapacityRing({ value, color }: { value: number; color: ChillerId }) {
   const ringColor = color === "red" ? "#fb7185" : color === "white" ? "#e2e8f0" : "#38bdf8";
   return (
-    <div className="relative grid h-28 w-28 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(${ringColor} ${value * 3.6}deg, rgba(148,163,184,0.16) 0deg)` }}>
+    <div
+      className="relative grid h-28 w-28 shrink-0 place-items-center rounded-full"
+      style={{
+        background: `conic-gradient(${ringColor} ${value * 3.6}deg, rgba(148,163,184,0.16) 0deg)`,
+      }}
+    >
       <div className="grid h-[78px] w-[78px] place-items-center rounded-full bg-background/95 shadow-[inset_0_0_18px_rgba(255,255,255,0.04)]">
         <div className="text-center">
-          <div className="font-display text-2xl font-bold" style={{ color: ringColor }}>{value}%</div>
+          <div className="font-display text-2xl font-bold" style={{ color: ringColor }}>
+            {value}%
+          </div>
           <div className="text-[10px] text-muted-foreground">Capacidade média</div>
         </div>
       </div>
@@ -533,37 +674,76 @@ function CapacityLine({ label, value }: { label: string; value: number }) {
 function CircuitCard({ chiller, circuitId }: { chiller: ChillerData; circuitId: "A" | "B" }) {
   const circuit = circuitSummary(chiller, circuitId);
   return (
-    <div className={cn("glass-card border p-5", circuit.hasAttention ? "border-status-warn/45" : "border-primary/35")}>
+    <div
+      className={cn(
+        "glass-card border p-5",
+        circuit.hasAttention ? "border-status-warn/45" : "border-primary/35",
+      )}
+    >
       <div className="mb-5 flex items-center justify-between">
         <h3 className="font-display text-lg font-bold uppercase text-primary">{circuit.title}</h3>
-        <StatusPill tone={circuit.hasAttention ? "warn" : "ok"}>{circuit.hasAttention ? "Atenção" : "Operando"}</StatusPill>
+        <StatusPill tone={circuit.hasAttention ? "warn" : "ok"}>
+          {circuit.hasAttention ? "Atenção" : "Operando"}
+        </StatusPill>
       </div>
       <div className="grid gap-3 md:grid-cols-5">
         <div className="md:col-span-1">
-          <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Capacidade média</div>
+          <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+            Capacidade média
+          </div>
           <div className="mt-1 font-display text-2xl font-bold">{circuit.capacity}%</div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-            <div className={cn("h-full rounded-full", circuit.hasAttention ? "bg-status-warn" : "bg-primary")} style={{ width: `${circuit.capacity}%` }} />
+            <div
+              className={cn(
+                "h-full rounded-full",
+                circuit.hasAttention ? "bg-status-warn" : "bg-primary",
+              )}
+              style={{ width: `${circuit.capacity}%` }}
+            />
           </div>
         </div>
         <CircuitMetric label="Sucção média" value={`${circuit.suction} psi`} />
         <CircuitMetric label="Descarga média" value={`${circuit.discharge} psi`} />
-        <CircuitMetric label="Óleo CP1/CP2" value={circuit.oil} tone={circuit.hasAttention ? "warn" : "ok"} />
+        <CircuitMetric
+          label="Óleo CP1/CP2"
+          value={circuit.oil}
+          tone={circuit.hasAttention ? "warn" : "ok"}
+        />
         <CircuitMetric label="Ventiladores" value={circuit.fans} />
       </div>
       <div className="mt-5 grid gap-3 border-t border-border/40 pt-4 md:grid-cols-2">
         <CircuitMetric label="Compressor 1" value={circuit.compressor1} tone="ok" />
-        <CircuitMetric label="Compressor 2" value={circuit.compressor2} tone={circuit.hasAttention ? "warn" : "ok"} />
+        <CircuitMetric
+          label="Compressor 2"
+          value={circuit.compressor2}
+          tone={circuit.hasAttention ? "warn" : "ok"}
+        />
       </div>
     </div>
   );
 }
 
-function CircuitMetric({ label, value, tone }: { label: string; value: string; tone?: "ok" | "warn" }) {
+function CircuitMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "ok" | "warn";
+}) {
   return (
     <div className="rounded-xl border border-border/30 bg-background/20 p-3">
       <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
-      <div className={cn("mt-1 font-display text-lg font-bold", tone === "ok" && "text-status-ok", tone === "warn" && "text-status-warn")}>{value}</div>
+      <div
+        className={cn(
+          "mt-1 font-display text-lg font-bold",
+          tone === "ok" && "text-status-ok",
+          tone === "warn" && "text-status-warn",
+        )}
+      >
+        {value}
+      </div>
     </div>
   );
 }
@@ -573,7 +753,11 @@ function Legend({ color, dashed, label }: { color: string; dashed?: boolean; lab
     <span className="inline-flex items-center gap-1.5">
       <span
         className={cn("h-0.5 w-5 rounded-full", dashed && "bg-[length:6px_2px]")}
-        style={dashed ? { backgroundImage: `linear-gradient(to right, ${color} 55%, transparent 55%)` } : { backgroundColor: color }}
+        style={
+          dashed
+            ? { backgroundImage: `linear-gradient(to right, ${color} 55%, transparent 55%)` }
+            : { backgroundColor: color }
+        }
       />
       {label}
     </span>

@@ -22,8 +22,17 @@ import {
 import pumpBlue from "@/assets/pump-blue.png";
 import pumpRed from "@/assets/pump-red.png";
 import pumpWhite from "@/assets/pump-white.png";
-import { chillers as mockChillers, type ChillerData, type ChillerId, type PumpData } from "@/data/mockCagData";
-import { mergeChillersFromDashboard, useDashboardPeriod } from "@/lib/cag-dashboard-api";
+import {
+  chillers as mockChillers,
+  type ChillerData,
+  type ChillerId,
+  type PumpData,
+} from "@/data/mockCagData";
+import {
+  mergePumpGroupsFromDashboard,
+  useDashboardPeriod,
+  type UiPeriod,
+} from "@/lib/cag-dashboard-api";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/pumps")({
@@ -52,7 +61,10 @@ const groupLabels: Record<ChillerId, string> = {
   white: "Bombas Branco",
 };
 
-const groupColors: Record<ChillerId, { dot: string; text: string; border: string; glow: string; soft: string; accent: string }> = {
+const groupColors: Record<
+  ChillerId,
+  { dot: string; text: string; border: string; glow: string; soft: string; accent: string }
+> = {
   blue: {
     dot: "bg-sky-400",
     text: "text-sky-300",
@@ -81,7 +93,12 @@ const groupColors: Record<ChillerId, { dot: string; text: string; border: string
 
 const trendContexts: Record<
   PumpTrendContext,
-  { label: string; subtitle: string; unit: string; lines: Array<{ key: string; label: string; color: string; dashed?: boolean }> }
+  {
+    label: string;
+    subtitle: string;
+    unit: string;
+    lines: Array<{ key: string; label: string; color: string; dashed?: boolean }>;
+  }
 > = {
   pressure: {
     label: "Pressão",
@@ -112,7 +129,10 @@ const trendContexts: Record<
 };
 
 function fmt(value: number, digits = 1) {
-  return value.toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
 }
 
 function periodPointCount(period: PeriodKey) {
@@ -123,7 +143,8 @@ function periodPointCount(period: PeriodKey) {
 
 function periodTickLabel(period: PeriodKey, index: number) {
   if (period === "d1") return `${String(index).padStart(2, "0")}h`;
-  if (period === "week") return [`D-6`, `D-5`, `D-4`, `D-3`, `D-2`, `D-1`, `Hoje`][index] || `D-${6 - index}`;
+  if (period === "week")
+    return [`D-6`, `D-5`, `D-4`, `D-3`, `D-2`, `D-1`, `Hoje`][index] || `D-${6 - index}`;
   return `${String(index + 1).padStart(2, "0")}/06`;
 }
 
@@ -134,7 +155,10 @@ function trendPeriodLabel(period: PeriodKey) {
 }
 
 function groupStatus(group: ChillerData) {
-  const criticalPumps = group.pumps.filter((pump) => pump.alarm || pump.mode === "local" || pump.pressureError < -0.3 || pump.bypassValve > 50);
+  const criticalPumps = group.pumps.filter(
+    (pump) =>
+      pump.alarm || pump.mode === "local" || pump.pressureError < -0.3 || pump.bypassValve > 50,
+  );
   const pumpsOn = group.pumps.filter((pump) => pump.status === "on").length;
   const pressureError = group.hydraulic.pressureError;
 
@@ -184,7 +208,10 @@ function buildPumpTrendData(group: ChillerData, period: PeriodKey) {
     const wave = Math.sin(index / (period === "month" ? 3.5 : 1.8));
     const drift = group.id === "red" ? -0.12 * Math.sin(index / 4) : 0.05 * Math.cos(index / 3);
     const pressure = Number((pressureBase + wave * 0.12 * smoothing + drift).toFixed(2));
-    const bypass = Math.max(0, Math.min(100, Math.round(bypassBase + wave * 8 * smoothing + (group.id === "red" ? 4 : -2))));
+    const bypass = Math.max(
+      0,
+      Math.min(100, Math.round(bypassBase + wave * 8 * smoothing + (group.id === "red" ? 4 : -2))),
+    );
 
     return {
       t: periodTickLabel(period, index),
@@ -240,8 +267,14 @@ function getEvents(group: ChillerData) {
 function getRecommendations(group: ChillerData) {
   if (group.id === "red") {
     return [
-      { title: "Verificar pressão da linha", detail: "Pressão média abaixo do setpoint no período." },
-      { title: "Inspecionar válvula bypass", detail: "Abertura elevada pode indicar recirculação excessiva." },
+      {
+        title: "Verificar pressão da linha",
+        detail: "Pressão média abaixo do setpoint no período.",
+      },
+      {
+        title: "Inspecionar válvula bypass",
+        detail: "Abertura elevada pode indicar recirculação excessiva.",
+      },
       { title: "Validar operação da BAG 2", detail: "Bomba com parada associada à baixa pressão." },
     ];
   }
@@ -251,14 +284,25 @@ function getRecommendations(group: ChillerData) {
 
 function PumpCard({ pump, index }: { pump: PumpData; index: number }) {
   const status = pumpStatusLabel(pump);
-  const hasAttention = status.tone !== "ok" || pump.mode === "local" || pump.pressureError < -0.3 || pump.bypassValve > 50;
+  const hasAttention =
+    status.tone !== "ok" ||
+    pump.mode === "local" ||
+    pump.pressureError < -0.3 ||
+    pump.bypassValve > 50;
 
   return (
-    <article className={cn("rounded-2xl border border-border/55 bg-surface-2/35 p-4", hasAttention && "border-status-warn/45 bg-status-warn/5")}> 
+    <article
+      className={cn(
+        "rounded-2xl border border-border/55 bg-surface-2/35 p-4",
+        hasAttention && "border-status-warn/45 bg-status-warn/5",
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-display text-lg font-bold">BAG {index + 1}</h3>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Bomba de água gelada</p>
+          <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            Bomba de água gelada
+          </p>
         </div>
         <span className={statusPill(status.tone, status.label)}>
           <span className="h-1.5 w-1.5 rounded-full bg-current" />
@@ -269,26 +313,57 @@ function PumpCard({ pump, index }: { pump: PumpData; index: number }) {
       <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
         <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Modo</p>
-          <p className={cn("mt-1 font-bold", pump.mode === "local" ? "text-status-warn" : "text-foreground")}>{pump.mode === "local" ? "Local" : "Remoto"}</p>
+          <p
+            className={cn(
+              "mt-1 font-bold",
+              pump.mode === "local" ? "text-status-warn" : "text-foreground",
+            )}
+          >
+            {pump.mode === "local" ? "Local" : "Remoto"}
+          </p>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Status</p>
-          <p className={cn("mt-1 font-bold", pump.status === "on" ? "text-status-ok" : "text-muted-foreground")}>{pump.status === "on" ? "Operando" : "Parada"}</p>
+          <p
+            className={cn(
+              "mt-1 font-bold",
+              pump.status === "on" ? "text-status-ok" : "text-muted-foreground",
+            )}
+          >
+            {pump.status === "on" ? "Operando" : "Parada"}
+          </p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Horas ligada</p>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            Horas ligada
+          </p>
           <p className="mt-1 font-mono text-base font-bold">{fmt(pumpHours(pump, index), 1)} h</p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Partidas est.</p>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            Partidas est.
+          </p>
           <p className="mt-1 font-mono text-base font-bold">{pumpStarts(pump, index)}</p>
         </div>
       </div>
 
       <div className="mt-5 border-t border-border/50 pt-3">
-        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Última ocorrência</p>
-        <div className={cn("mt-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold", hasAttention ? "border-status-warn/45 bg-status-warn/10 text-status-warn" : "border-status-ok/35 bg-status-ok/10 text-status-ok")}>
-          {hasAttention ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          Última ocorrência
+        </p>
+        <div
+          className={cn(
+            "mt-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold",
+            hasAttention
+              ? "border-status-warn/45 bg-status-warn/10 text-status-warn"
+              : "border-status-ok/35 bg-status-ok/10 text-status-ok",
+          )}
+        >
+          {hasAttention ? (
+            <AlertTriangle className="h-3 w-3" />
+          ) : (
+            <CheckCircle2 className="h-3 w-3" />
+          )}
           {pump.lastEvent || "Sem ocorrências relevantes"}
         </div>
       </div>
@@ -297,10 +372,18 @@ function PumpCard({ pump, index }: { pump: PumpData; index: number }) {
 }
 
 function PumpsPage() {
-  const { data: apiPayload, loading, error } = useDashboardPeriod();
-  const chillers = useMemo(() => mergeChillersFromDashboard(apiPayload, mockChillers), [apiPayload]);
+  const { period: globalPeriod, data: apiPayload, loading, error } = useDashboardPeriod();
+  const chillers = useMemo(
+    () => mergePumpGroupsFromDashboard(apiPayload, mockChillers),
+    [apiPayload],
+  );
   const [activeId, setActiveId] = useState<ChillerId>("blue");
-  const [period, setPeriod] = useState<PeriodKey>("d1");
+  const period: PeriodKey = globalPeriod === "7d" ? "week" : globalPeriod === "1m" ? "month" : "d1";
+  const setGlobalPeriod = (next: PeriodKey) => {
+    const ui = (next === "week" ? "7d" : next === "month" ? "1m" : "d1") as UiPeriod;
+    window.localStorage.setItem("cag-period", ui);
+    window.dispatchEvent(new CustomEvent("cag-period-change", { detail: ui }));
+  };
   const [trendContext, setTrendContext] = useState<PumpTrendContext>("pressure");
   const active = chillers.find((group) => group.id === activeId) || chillers[0];
   const status = groupStatus(active);
@@ -317,7 +400,9 @@ function PumpsPage() {
       <section className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <h1 className="font-display text-3xl font-bold tracking-tight">Bombas</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Resumo operacional dos grupos de bombeamento de água gelada</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Resumo operacional dos grupos de bombeamento de água gelada
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-surface-2/55 px-3 py-2 text-xs text-muted-foreground">
@@ -325,7 +410,9 @@ function PumpsPage() {
               <CalendarDays className="h-4 w-4" />
             </span>
             <span>
-              <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Atualização dos dados</span>
+              <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                Atualização dos dados
+              </span>
               <span className="font-semibold text-foreground">Diariamente às 07:00</span>
             </span>
           </div>
@@ -333,11 +420,13 @@ function PumpsPage() {
             <span className="text-muted-foreground">Período analisado</span>
             <select
               value={period}
-              onChange={(event) => setPeriod(event.target.value as PeriodKey)}
+              onChange={(event) => setGlobalPeriod(event.target.value as PeriodKey)}
               className="rounded-lg border border-border/50 bg-background/65 px-3 py-1.5 font-semibold text-foreground outline-none"
             >
               {periodOptions.map((option) => (
-                <option key={option.key} value={option.key}>{option.label} · {option.date}</option>
+                <option key={option.key} value={option.key}>
+                  {option.label} · {option.date}
+                </option>
               ))}
             </select>
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
@@ -361,29 +450,60 @@ function PumpsPage() {
                 onClick={() => setActiveId(group.id)}
                 className={cn(
                   "flex items-center justify-center gap-3 rounded-xl border px-5 py-4 text-sm font-bold text-muted-foreground transition",
-                  activeTab ? `${tabColor.border} bg-surface-3/70 ${tabColor.text} ${tabColor.glow}` : "border-border/55 bg-surface-2/35 hover:border-primary/25 hover:text-foreground",
+                  activeTab
+                    ? `${tabColor.border} bg-surface-3/70 ${tabColor.text} ${tabColor.glow}`
+                    : "border-border/55 bg-surface-2/35 hover:border-primary/25 hover:text-foreground",
                 )}
               >
-                <span className={cn("h-3 w-3 rounded-full shadow-[0_0_16px_currentColor]", tabColor.dot)} />
+                <span
+                  className={cn(
+                    "h-3 w-3 rounded-full shadow-[0_0_16px_currentColor]",
+                    tabColor.dot,
+                  )}
+                />
                 {groupLabels[group.id]}
-                <span className={cn("rounded-full border px-2 py-0.5 text-[10px]", tabStatus.tone === "ok" ? "border-status-ok/35 text-status-ok" : "border-status-warn/45 text-status-warn")}>{tabStatus.label}</span>
+                <span
+                  className={cn(
+                    "rounded-full border px-2 py-0.5 text-[10px]",
+                    tabStatus.tone === "ok"
+                      ? "border-status-ok/35 text-status-ok"
+                      : "border-status-warn/45 text-status-warn",
+                  )}
+                >
+                  {tabStatus.label}
+                </span>
               </button>
             );
           })}
         </div>
       </section>
 
-      <section className={cn("glass-card relative overflow-hidden border p-6", color.border, color.glow)}>
-        <div className={cn("absolute inset-0 pointer-events-none bg-gradient-to-br opacity-80", color.soft)} />
+      <section
+        className={cn("glass-card relative overflow-hidden border p-6", color.border, color.glow)}
+      >
+        <div
+          className={cn(
+            "absolute inset-0 pointer-events-none bg-gradient-to-br opacity-80",
+            color.soft,
+          )}
+        />
         <div className="relative grid gap-6 xl:grid-cols-[1.15fr_1.85fr]">
           <div className="flex items-center gap-6">
             <div className="grid min-h-[178px] w-[285px] place-items-center rounded-2xl bg-background/25 shadow-inner">
-              <img src={pumpImages[active.id]} alt={groupLabels[active.id]} className="h-[170px] w-[260px] object-contain drop-shadow-[0_0_24px_rgba(56,189,248,0.18)]" />
+              <img
+                src={pumpImages[active.id]}
+                alt={groupLabels[active.id]}
+                className="h-[170px] w-[260px] object-contain drop-shadow-[0_0_24px_rgba(56,189,248,0.18)]"
+              />
             </div>
             <div className="min-w-[230px] flex-1">
-              <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Resumo do grupo</div>
+              <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                Resumo do grupo
+              </div>
               <div className="mt-1 flex flex-wrap items-center gap-3">
-                <h2 className={cn("font-display text-2xl font-bold", color.text)}>{groupLabels[active.id]}</h2>
+                <h2 className={cn("font-display text-2xl font-bold", color.text)}>
+                  {groupLabels[active.id]}
+                </h2>
                 <span className={statusPill(status.tone, status.label)}>
                   <span className="h-1.5 w-1.5 rounded-full bg-current" />
                   {status.label}
@@ -391,9 +511,20 @@ function PumpsPage() {
               </div>
               <p className="mt-3 text-sm text-muted-foreground">{status.description}</p>
               <div className="mt-5 rounded-xl border border-border/45 bg-background/35 p-4">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Principal ocorrência</p>
-                <p className={cn("mt-2 flex items-center gap-2 text-sm font-bold", status.tone === "ok" ? "text-status-ok" : "text-status-warn")}>
-                  {status.tone === "ok" ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Principal ocorrência
+                </p>
+                <p
+                  className={cn(
+                    "mt-2 flex items-center gap-2 text-sm font-bold",
+                    status.tone === "ok" ? "text-status-ok" : "text-status-warn",
+                  )}
+                >
+                  {status.tone === "ok" ? (
+                    <CheckCircle2 className="h-4 w-4" />
+                  ) : (
+                    <AlertTriangle className="h-4 w-4" />
+                  )}
                   {status.occurrence}
                 </p>
               </div>
@@ -402,16 +533,63 @@ function PumpsPage() {
 
           <div className="grid gap-4 md:grid-cols-5">
             {[
-              { label: "Pressão média", value: `${fmt(active.hydraulic.pressureLine, 2)} bar`, detail: active.hydraulic.pressureError < 0 ? `${fmt(active.hydraulic.pressureError, 2)} bar` : "Dentro da faixa", alert: active.hydraulic.pressureError < -0.3 },
-              { label: "Setpoint", value: `${fmt(active.hydraulic.pressureSetpoint, 2)} bar`, detail: "Pressão alvo", alert: false },
-              { label: "Desvio", value: `${fmt(active.hydraulic.pressureError, 2)} bar`, detail: active.hydraulic.pressureError < -0.3 ? "Abaixo do setpoint" : "Estável", alert: active.hydraulic.pressureError < -0.3 },
-              { label: "Válvula bypass", value: `${active.hydraulic.bypassValve}%`, detail: active.hydraulic.bypassValve > 50 ? "Abertura elevada" : "Normal", alert: active.hydraulic.bypassValve > 50 },
-              { label: "Bombas operando", value: `${status.pumpsOn} / 4`, detail: status.pumpsOn >= 3 ? "Em operação" : "Atenção", alert: status.pumpsOn < 3 },
+              {
+                label: "Pressão média",
+                value: `${fmt(active.hydraulic.pressureLine, 2)} bar`,
+                detail:
+                  active.hydraulic.pressureError < 0
+                    ? `${fmt(active.hydraulic.pressureError, 2)} bar`
+                    : "Dentro da faixa",
+                alert: active.hydraulic.pressureError < -0.3,
+              },
+              {
+                label: "Setpoint",
+                value: `${fmt(active.hydraulic.pressureSetpoint, 2)} bar`,
+                detail: "Pressão alvo",
+                alert: false,
+              },
+              {
+                label: "Desvio",
+                value: `${fmt(active.hydraulic.pressureError, 2)} bar`,
+                detail: active.hydraulic.pressureError < -0.3 ? "Abaixo do setpoint" : "Estável",
+                alert: active.hydraulic.pressureError < -0.3,
+              },
+              {
+                label: "Válvula bypass",
+                value: `${active.hydraulic.bypassValve}%`,
+                detail: active.hydraulic.bypassValve > 50 ? "Abertura elevada" : "Normal",
+                alert: active.hydraulic.bypassValve > 50,
+              },
+              {
+                label: "Bombas operando",
+                value: `${status.pumpsOn} / 4`,
+                detail: status.pumpsOn >= 3 ? "Em operação" : "Atenção",
+                alert: status.pumpsOn < 3,
+              },
             ].map((metric) => (
-              <div key={metric.label} className="rounded-2xl border border-border/45 bg-background/35 p-4">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{metric.label}</p>
-                <p className={cn("mt-3 font-display text-2xl font-bold", metric.alert && "text-status-alert")}>{metric.value}</p>
-                <p className={cn("mt-2 text-xs", metric.alert ? "text-status-warn" : "text-muted-foreground")}>{metric.detail}</p>
+              <div
+                key={metric.label}
+                className="rounded-2xl border border-border/45 bg-background/35 p-4"
+              >
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {metric.label}
+                </p>
+                <p
+                  className={cn(
+                    "mt-3 font-display text-2xl font-bold",
+                    metric.alert && "text-status-alert",
+                  )}
+                >
+                  {metric.value}
+                </p>
+                <p
+                  className={cn(
+                    "mt-2 text-xs",
+                    metric.alert ? "text-status-warn" : "text-muted-foreground",
+                  )}
+                >
+                  {metric.detail}
+                </p>
               </div>
             ))}
           </div>
@@ -420,8 +598,12 @@ function PumpsPage() {
 
       <section className="glass-card p-5">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold uppercase tracking-wide">Status das bombas do grupo</h2>
-          <span className="text-xs text-muted-foreground">BAG1 a BAG4 · {selectedPeriod.label}</span>
+          <h2 className="font-display text-lg font-bold uppercase tracking-wide">
+            Status das bombas do grupo
+          </h2>
+          <span className="text-xs text-muted-foreground">
+            BAG1 a BAG4 · {selectedPeriod.label}
+          </span>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {active.pumps.map((pump, index) => (
@@ -434,8 +616,12 @@ function PumpsPage() {
         <div className="glass-card p-5">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="font-display text-lg font-bold uppercase tracking-wide">Tendências operacionais</h2>
-              <p className="mt-1 text-sm text-muted-foreground">{activeTrend.subtitle} · {trendPeriodLabel(period)}</p>
+              <h2 className="font-display text-lg font-bold uppercase tracking-wide">
+                Tendências operacionais
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {activeTrend.subtitle} · {trendPeriodLabel(period)}
+              </p>
             </div>
             <div className="rounded-2xl border border-border/50 bg-background/35 p-1">
               {(Object.keys(trendContexts) as PumpTrendContext[]).map((contextKey) => (
@@ -444,7 +630,9 @@ function PumpsPage() {
                   onClick={() => setTrendContext(contextKey)}
                   className={cn(
                     "rounded-xl px-4 py-2 text-xs font-bold transition",
-                    trendContext === contextKey ? "bg-primary/20 text-primary shadow-[0_0_18px_rgba(14,165,233,0.15)]" : "text-muted-foreground hover:text-foreground",
+                    trendContext === contextKey
+                      ? "bg-primary/20 text-primary shadow-[0_0_18px_rgba(14,165,233,0.15)]"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {trendContexts[contextKey].label}
@@ -456,8 +644,18 @@ function PumpsPage() {
           <div className="mb-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
             {activeTrend.lines.map((line) => (
               <span key={line.key} className="inline-flex items-center gap-2">
-                <span className={cn("h-0.5 w-6", line.dashed && "border-t border-dashed bg-transparent")} style={{ backgroundColor: line.dashed ? "transparent" : line.color, borderColor: line.color }} />
-                {line.label}{activeTrend.unit !== "status" ? ` (${activeTrend.unit})` : ""}
+                <span
+                  className={cn(
+                    "h-0.5 w-6",
+                    line.dashed && "border-t border-dashed bg-transparent",
+                  )}
+                  style={{
+                    backgroundColor: line.dashed ? "transparent" : line.color,
+                    borderColor: line.color,
+                  }}
+                />
+                {line.label}
+                {activeTrend.unit !== "status" ? ` (${activeTrend.unit})` : ""}
               </span>
             ))}
           </div>
@@ -465,8 +663,18 @@ function PumpsPage() {
           <div className="h-[275px] rounded-2xl border border-border/35 bg-background/20 p-4">
             <ResponsiveContainer width="100%" height="100%">
               <ReLineChart data={trendData} margin={{ top: 10, right: 18, bottom: 0, left: 0 }}>
-                <CartesianGrid stroke="rgba(148,163,184,0.12)" strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="t" tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} interval={period === "month" ? 4 : 0} />
+                <CartesianGrid
+                  stroke="rgba(148,163,184,0.12)"
+                  strokeDasharray="3 3"
+                  vertical={false}
+                />
+                <XAxis
+                  dataKey="t"
+                  tick={{ fill: "#94a3b8", fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                  interval={period === "month" ? 4 : 0}
+                />
                 <YAxis
                   domain={activeYAxis.domain}
                   ticks={activeYAxis.ticks}
@@ -474,10 +682,17 @@ function PumpsPage() {
                   axisLine={false}
                   tickLine={false}
                   width={44}
-                  tickFormatter={(value) => trendContext === "pumps" ? (Number(value) === 1 ? "Lig." : "Desl.") : `${value}`}
+                  tickFormatter={(value) =>
+                    trendContext === "pumps" ? (Number(value) === 1 ? "Lig." : "Desl.") : `${value}`
+                  }
                 />
                 <Tooltip
-                  contentStyle={{ background: "rgba(8,13,26,0.96)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 12, color: "#e5edf8" }}
+                  contentStyle={{
+                    background: "rgba(8,13,26,0.96)",
+                    border: "1px solid rgba(148,163,184,0.25)",
+                    borderRadius: 12,
+                    color: "#e5edf8",
+                  }}
                   labelStyle={{ color: "#cbd5e1" }}
                 />
                 {activeTrend.lines.map((line) => (
@@ -499,20 +714,45 @@ function PumpsPage() {
 
         <div className="glass-card p-5">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display text-lg font-bold uppercase tracking-wide">Eventos recentes</h2>
+            <h2 className="font-display text-lg font-bold uppercase tracking-wide">
+              Eventos recentes
+            </h2>
             <button className="text-xs font-bold text-status-ai hover:underline">Ver todos</button>
           </div>
           <div className="space-y-3">
             {events.map((event) => (
-              <div key={`${event.time}-${event.label}`} className="flex items-center gap-3 rounded-2xl border border-border/35 bg-background/25 p-3">
-                <span className={cn("grid h-8 w-8 place-items-center rounded-full border", event.tone === "warn" ? "border-status-warn/40 bg-status-warn/10 text-status-warn" : "border-primary/35 bg-primary/10 text-primary")}>
-                  {event.tone === "warn" ? <AlertTriangle className="h-4 w-4" /> : <Info className="h-4 w-4" />}
+              <div
+                key={`${event.time}-${event.label}`}
+                className="flex items-center gap-3 rounded-2xl border border-border/35 bg-background/25 p-3"
+              >
+                <span
+                  className={cn(
+                    "grid h-8 w-8 place-items-center rounded-full border",
+                    event.tone === "warn"
+                      ? "border-status-warn/40 bg-status-warn/10 text-status-warn"
+                      : "border-primary/35 bg-primary/10 text-primary",
+                  )}
+                >
+                  {event.tone === "warn" ? (
+                    <AlertTriangle className="h-4 w-4" />
+                  ) : (
+                    <Info className="h-4 w-4" />
+                  )}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-mono text-xs font-bold text-foreground">{event.time}</p>
                   <p className="truncate text-sm text-muted-foreground">{event.label}</p>
                 </div>
-                <span className={cn("rounded-full border px-2 py-0.5 text-[10px]", event.tone === "warn" ? "border-status-warn/40 text-status-warn" : "border-primary/35 text-primary")}>{event.tone === "warn" ? "Atenção" : "Informação"}</span>
+                <span
+                  className={cn(
+                    "rounded-full border px-2 py-0.5 text-[10px]",
+                    event.tone === "warn"
+                      ? "border-status-warn/40 text-status-warn"
+                      : "border-primary/35 text-primary",
+                  )}
+                >
+                  {event.tone === "warn" ? "Atenção" : "Informação"}
+                </span>
               </div>
             ))}
           </div>
@@ -520,14 +760,18 @@ function PumpsPage() {
 
         <div className="glass-card p-5">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display text-lg font-bold uppercase tracking-wide">Pontos de atenção</h2>
+            <h2 className="font-display text-lg font-bold uppercase tracking-wide">
+              Pontos de atenção
+            </h2>
             <Wrench className="h-4 w-4 text-status-alert" />
           </div>
           {recommendations.length ? (
             <div className="space-y-4">
               {recommendations.map((recommendation, index) => (
                 <div key={recommendation.title} className="flex gap-4">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-status-warn/40 bg-status-warn/10 font-display text-lg font-bold text-status-warn">{index + 1}</span>
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-status-warn/40 bg-status-warn/10 font-display text-lg font-bold text-status-warn">
+                    {index + 1}
+                  </span>
                   <div>
                     <p className="font-bold text-foreground">{recommendation.title}</p>
                     <p className="mt-1 text-sm text-muted-foreground">{recommendation.detail}</p>
@@ -543,7 +787,9 @@ function PumpsPage() {
             <div className="flex min-h-[220px] flex-col items-center justify-center text-center">
               <CheckCircle2 className="h-9 w-9 text-status-ok" />
               <p className="mt-4 font-display text-lg font-bold">Nenhuma ação crítica no momento</p>
-              <p className="mt-2 max-w-[260px] text-sm text-muted-foreground">Continue monitorando pressão, bypass e operação remota das bombas.</p>
+              <p className="mt-2 max-w-[260px] text-sm text-muted-foreground">
+                Continue monitorando pressão, bypass e operação remota das bombas.
+              </p>
             </div>
           )}
         </div>
@@ -551,7 +797,8 @@ function PumpsPage() {
 
       <div className="rounded-xl border border-border/55 bg-surface-2/35 px-4 py-3 text-xs text-muted-foreground">
         <Info className="mr-2 inline h-4 w-4 text-primary" />
-        Os dados apresentados são baseados no período selecionado: {selectedPeriod.label} ({selectedPeriod.date}).
+        Os dados apresentados são baseados no período selecionado: {selectedPeriod.label} (
+        {selectedPeriod.date}).
       </div>
     </div>
   );
