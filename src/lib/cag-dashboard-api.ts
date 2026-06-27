@@ -16,8 +16,18 @@ export const comparisonLabel = (period: UiPeriod) =>
   period === "7d" ? "vs semana anterior" : period === "1m" ? "vs mês anterior" : "vs dia anterior";
 
 export function getDashboardApiBase() {
-  const envUrl = import.meta.env.VITE_CAG_DASHBOARD_API_URL as string | undefined;
-  return (envUrl || "/webhook/cag/dashboard").replace(/\/$/, "");
+  const dashboardUrl = import.meta.env.VITE_CAG_DASHBOARD_API_URL as string | undefined;
+  const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
+
+  // VITE_CAG_DASHBOARD_API_URL can be used when the full endpoint is provided.
+  if (dashboardUrl) return dashboardUrl.replace(/\/$/, "");
+
+  // Current production env uses VITE_API_URL=https://.../webhook.
+  // The dashboard endpoint must therefore be /cag/dashboard under that base.
+  if (apiUrl) return `${apiUrl.replace(/\/$/, "")}/cag/dashboard`;
+
+  // Local/dev fallback keeps the previous relative path.
+  return "/webhook/cag/dashboard";
 }
 
 export async function fetchDashboardPeriod(period: UiPeriod, signal?: AbortSignal) {
