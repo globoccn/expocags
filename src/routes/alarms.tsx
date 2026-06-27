@@ -14,6 +14,7 @@ import {
   Wrench,
   XCircle,
 } from "lucide-react";
+import { dashboardRecommendations, dashboardTimeline, useDashboardPeriod } from "@/lib/cag-dashboard-api";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/alarms")({
@@ -240,19 +241,35 @@ function StatusBadge({ status, severity }: { status: AlarmStatus; severity: Excl
 }
 
 function AlarmsPage() {
+  const { data: apiPayload, loading, error } = useDashboardPeriod();
+  const apiEvents = useMemo(() => dashboardTimeline(apiPayload).map((e: any, index: number) => ({
+    id: index + 1,
+    time: e.time || e.hora || "--:--",
+    date: e.date || e.data || apiPayload?.period?.date || "--",
+    title: e.title || e.evento || "Ocorrência operacional",
+    equipment: e.equipment_name || e.equipment || e.equipamento || "CAG",
+    origin: String(e.origin || e.origem || "").includes("bomba") ? "bombas" : "chillers",
+    severity: String(e.severity || e.severidade || "info").includes("crit") ? "critico" : String(e.severity || e.severidade || "").includes("aten") ? "atencao" : "info",
+    status: String(e.status || "ativo").includes("resol") ? "resolvido" : "ativo",
+    details: e.details || e.detalhes || e.severity || e.severidade || "Info",
+  })), [apiPayload]);
+  const liveAlarmEvents = apiEvents.length ? apiEvents : alarmEvents;
+  const liveRecommendations = dashboardRecommendations(apiPayload);
   const [severity, setSeverity] = useState<Severity>("all");
   const [origin, setOrigin] = useState<Origin>("all");
 
   const filteredEvents = useMemo(() => {
-    return alarmEvents.filter((event) => {
+    return liveAlarmEvents.filter((event) => {
       const matchesSeverity = severity === "all" || event.severity === severity;
       const matchesOrigin = origin === "all" || event.origin === origin;
       return matchesSeverity && matchesOrigin;
     });
-  }, [severity, origin]);
+  }, [severity, origin, liveAlarmEvents]);
 
   return (
     <div className="space-y-5">
+      {loading && <div className="glass-card p-3 text-xs text-muted-foreground">Carregando dados reais da API Dashboard...</div>}
+      {error && <div className="glass-card border-status-alert/40 bg-status-alert/10 p-3 text-xs text-status-alert">Falha na API Dashboard: {error}</div>}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
@@ -267,10 +284,10 @@ function AlarmsPage() {
       </div>
 
       <div className="grid gap-3 xl:grid-cols-6 md:grid-cols-3 sm:grid-cols-2">
-        <KpiCard icon={Bell} title="Alarmes ativos" value="6" subtitle="↑ 50% vs período anterior" tone="critico" />
-        <KpiCard icon={AlertTriangle} title="Críticos" value="2" subtitle="↑ 100% vs período anterior" tone="critico" />
-        <KpiCard icon={XCircle} title="Em atenção" value="4" subtitle="↑ 33% vs período anterior" tone="atencao" />
-        <KpiCard icon={CheckCircle2} title="Resolvidos" value="18" subtitle="↓ 10% vs período anterior" tone="ok" />
+        <KpiCard icon={Bell} title="Alarmes ativos" value={String(liveAlarmEvents.filter(e => e.status === "ativo").length)} subtitle="↑ 50% vs período anterior" tone="critico" />
+        <KpiCard icon={AlertTriangle} title="Críticos" value={String(liveAlarmEvents.filter(e => e.severity === "critico").length)} subtitle="↑ 100% vs período anterior" tone="critico" />
+        <KpiCard icon={XCircle} title="Em atenção" value={String(liveAlarmEvents.filter(e => e.severity === "atencao").length)} subtitle="↑ 33% vs período anterior" tone="atencao" />
+        <KpiCard icon={CheckCircle2} title="Resolvidos" value={String(liveAlarmEvents.filter(e => e.status === "resolvido").length)} subtitle="↓ 10% vs período anterior" tone="ok" />
         <KpiCard icon={Clock3} title="Tempo médio" value="2h47m" subtitle="↓ 18% vs período anterior" tone="ai" />
         <KpiCard icon={ActivityIcon} title="Mais recorrente" value="Pressão" subtitle="8 ocorrências" tone="info" />
       </div>
@@ -401,7 +418,7 @@ function AlarmsPage() {
             <section className="glass-card p-4">
               <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.12em]">Recomendações operacionais</h2>
               <div className="space-y-3">
-                {recommendations.map((rec) => {
+                {(liveRecommendations.length ? liveRecommendations.map((r: any) => typeof r === "string" ? { icon: Wrench, title: r, subtitle: "Gerado pela API Dashboard", tone: "ai" as const } : { icon: Wrench, title: r.title || String(r), subtitle: r.subtitle || r.desc || "Gerado pela API Dashboard", tone: "ai" as const }) : recommendations).map((rec) => {
                   const Icon = rec.icon;
                   const tone = rec.tone === "ai" ? { text: "text-status-ai", iconBg: "bg-status-ai/15" } : severityTone[rec.tone];
                   return (

@@ -22,7 +22,8 @@ import {
 import chillerBlue from "@/assets/chiller-blue.png";
 import chillerRed from "@/assets/chiller-red.png";
 import chillerWhite from "@/assets/chiller-white.png";
-import { aiInsights, chillerTheme, chillers, events, type ChillerData, type ChillerId } from "@/data/mockCagData";
+import { aiInsights, chillerTheme, chillers as mockChillers, events, type ChillerData, type ChillerId } from "@/data/mockCagData";
+import { mergeChillersFromDashboard, useDashboardPeriod } from "@/lib/cag-dashboard-api";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/chillers")({
@@ -205,6 +206,8 @@ function trendYAxisConfig(context: TrendContext) {
 }
 
 function ChillersPage() {
+  const { data: apiPayload, loading, error } = useDashboardPeriod();
+  const chillers = useMemo(() => mergeChillersFromDashboard(apiPayload, mockChillers), [apiPayload]);
   const [activeId, setActiveId] = useState<ChillerId>("blue");
   const [period, setPeriod] = useState<PeriodKey>("d1");
   const [trendContext, setTrendContext] = useState<TrendContext>("water");

@@ -28,7 +28,8 @@ import {
   Thermometer,
   TrendingDown,
 } from "lucide-react";
-import { chillers, type ChillerData, type ChillerId } from "@/data/mockCagData";
+import { chillers as mockChillers, type ChillerData, type ChillerId } from "@/data/mockCagData";
+import { mergeChillersFromDashboard, useDashboardPeriod } from "@/lib/cag-dashboard-api";
 import { chartColors, tooltipStyle } from "@/components/cag/chart-wrap";
 import { cn } from "@/lib/utils";
 
@@ -124,8 +125,8 @@ function sampleSeries<T>(series: T[], index: number, total: number) {
 }
 
 function getSelectedChillers(group: GroupKey) {
-  if (group === "all") return chillers;
-  return chillers.filter((c) => c.id === group);
+  if (group === "all") return mockChillers;
+  return mockChillers.filter((c) => c.id === group);
 }
 
 function avg(values: number[]) {
@@ -224,7 +225,7 @@ function metricValue(context: ContextKey, data: any[]) {
 }
 
 function comparisonData(context: ContextKey, group: GroupKey) {
-  const source = group === "all" ? chillers : getSelectedChillers(group);
+  const source = group === "all" ? mockChillers : mockChillers.filter((c) => c.id === group);
   if (context === "water") {
     return source.map((c) => ({ name: c.name.replace("Chiller ", ""), value: c.deltaT, fill: c.id === "red" ? "#fb2d5c" : c.id === "blue" ? "#38bdf8" : "#e5e7eb" }));
   }
@@ -327,6 +328,8 @@ function globalToLocalPeriod(value: string | null): PeriodKey {
 }
 
 function TrendsPage() {
+  const { data: apiPayload, loading, error } = useDashboardPeriod();
+  const chillers = useMemo(() => mergeChillersFromDashboard(apiPayload, mockChillers), [apiPayload]);
   const [context, setContext] = useState<ContextKey>("water");
   const [period, setPeriod] = useState<PeriodKey>(() => {
     if (typeof window === "undefined") return "d1";

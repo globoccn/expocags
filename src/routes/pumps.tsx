@@ -22,7 +22,8 @@ import {
 import pumpBlue from "@/assets/pump-blue.png";
 import pumpRed from "@/assets/pump-red.png";
 import pumpWhite from "@/assets/pump-white.png";
-import { chillers, type ChillerData, type ChillerId, type PumpData } from "@/data/mockCagData";
+import { chillers as mockChillers, type ChillerData, type ChillerId, type PumpData } from "@/data/mockCagData";
+import { mergeChillersFromDashboard, useDashboardPeriod } from "@/lib/cag-dashboard-api";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/pumps")({
@@ -296,6 +297,8 @@ function PumpCard({ pump, index }: { pump: PumpData; index: number }) {
 }
 
 function PumpsPage() {
+  const { data: apiPayload, loading, error } = useDashboardPeriod();
+  const chillers = useMemo(() => mergeChillersFromDashboard(apiPayload, mockChillers), [apiPayload]);
   const [activeId, setActiveId] = useState<ChillerId>("blue");
   const [period, setPeriod] = useState<PeriodKey>("d1");
   const [trendContext, setTrendContext] = useState<PumpTrendContext>("pressure");
