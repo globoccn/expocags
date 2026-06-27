@@ -28,7 +28,7 @@ import {
   Thermometer,
   TrendingDown,
 } from "lucide-react";
-import { chillers as mockChillers, type ChillerData, type ChillerId } from "@/data/mockCagData";
+import { chillers as trendTemplates, type ChillerData, type ChillerId } from "@/data/mockCagData";
 import {
   mergeChillersFromDashboard,
   normalizeTrendsPayload,
@@ -120,8 +120,10 @@ const contextConfig: Record<
   },
 };
 
-function fmt(value: number, digits = 1) {
-  return value.toLocaleString("pt-BR", {
+function fmt(value: number | undefined | null, digits = 1) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return "--";
+  return n.toLocaleString("pt-BR", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
@@ -147,43 +149,50 @@ function getSelectedChillers(group: GroupKey, source: ChillerData[]) {
 }
 
 function avg(values: number[]) {
-  const valid = values.filter((v) => Number.isFinite(v));
+  const valid = values.filter((v) => Number.isFinite(v) && v > 0);
   return valid.length ? valid.reduce((acc, v) => acc + v, 0) / valid.length : 0;
 }
 
 function buildTrendRows(period: PeriodKey, group: GroupKey, source: ChillerData[]) {
   const selected = getSelectedChillers(group, source);
-  const points = periodOptions.find((p) => p.key === period)?.points || 24;
-
+  const maxLen = Math.max(
+    ...selected.map((chiller) => Math.max(
+      chiller.series?.feedReturnSetpoint?.length || 0,
+      chiller.series?.deltaT?.length || 0,
+      chiller.series?.capacity?.length || 0,
+      chiller.series?.pressureHigh?.length || 0,
+      chiller.series?.pressureLow?.length || 0,
+    )),
+    0,
+  );
+  if (!maxLen) return [];
+  const points = Math.min(periodOptions.find((p) => p.key === period)?.points || 24, maxLen);
   return Array.from({ length: points }, (_, index) => {
-    const factor = period === "d1" ? 1 : period === "week" ? 0.72 : 0.52;
-    const wave = Math.sin(index / (period === "month" ? 3.4 : 1.7));
     const rows = selected.map((chiller) => {
-      const water = sampleSeries(chiller.series.feedReturnSetpoint, index, points);
-      const delta = sampleSeries(chiller.series.deltaT, index, points);
-      const cap = sampleSeries(chiller.series.capacity, index, points);
-      const high = sampleSeries(chiller.series.pressureHigh, index, points);
-      const low = sampleSeries(chiller.series.pressureLow, index, points);
+      const water = sampleSeries(chiller.series.feedReturnSetpoint || [], index, points);
+      const delta = sampleSeries(chiller.series.deltaT || [], index, points);
+      const cap = sampleSeries(chiller.series.capacity || [], index, points);
+      const high = sampleSeries(chiller.series.pressureHigh || [], index, points);
+      const low = sampleSeries(chiller.series.pressureLow || [], index, points);
       return {
-        feed: (water?.feed ?? chiller.feedTemp) + wave * 0.12 * factor,
-        ret: (water?.ret ?? chiller.returnTemp) + wave * 0.18 * factor,
-        set: chiller.setpoint,
-        dt: (delta?.v ?? chiller.deltaT) + wave * 0.08 * factor,
-        capTotal: (cap?.total ?? chiller.capacityTotal) + wave * 1.8 * factor,
-        capA: (cap?.a ?? chiller.capacityA) + wave * 1.5 * factor,
-        capB: (cap?.b ?? chiller.capacityB) - wave * 1.1 * factor,
-        sucA: (low?.a ?? 4.8) * 50,
-        sucB: (low?.b ?? 4.7) * 50,
-        descA: (high?.a ?? 16.2) * 50,
-        descB: (high?.b ?? 16.0) * 50,
+        feed: water?.feed,
+        ret: water?.ret,
+        set: water?.set,
+        dt: delta?.v,
+        capTotal: cap?.total,
+        capA: cap?.a,
+        capB: cap?.b,
+        sucA: low?.a ? low.a * 50 : undefined,
+        sucB: low?.b ? low.b * 50 : undefined,
+        descA: high?.a ? high.a * 50 : undefined,
+        descB: high?.b ? high.b * 50 : undefined,
         oil: avg(chiller.circuits.flatMap((c) => [c.oilPressureC1, c.oilPressureC2])) * 100,
-        pressureLine: chiller.hydraulic.pressureLine,
-        pressureSetpoint: chiller.hydraulic.pressureSetpoint,
-        bypass: chiller.hydraulic.bypassValve + Math.sin(index / 2) * 3 * factor,
+        pressureLine: chiller.hydraulic?.pressureLine,
+        pressureSetpoint: chiller.hydraulic?.pressureSetpoint,
+        bypass: chiller.hydraulic?.bypassValve,
         pumpsOn: chiller.pumpsOn,
       };
     });
-
     return {
       t: periodTickLabel(period, index),
       entrada: Number(avg(rows.map((r) => r.ret)).toFixed(2)),
@@ -198,8 +207,8 @@ function buildTrendRows(period: PeriodKey, group: GroupKey, source: ChillerData[
       descargaA: Math.round(avg(rows.map((r) => r.descA))),
       descargaB: Math.round(avg(rows.map((r) => r.descB))),
       oleo: Math.round(avg(rows.map((r) => r.oil))),
-      pressaoLinha: Number((avg(rows.map((r) => r.pressureLine)) * 20).toFixed(1)),
-      setpointPressao: Number((avg(rows.map((r) => r.pressureSetpoint)) * 20).toFixed(1)),
+      pressaoLinha: Number(avg(rows.map((r) => r.pressureLine)).toFixed(1)),
+      setpointPressao: Number(avg(rows.map((r) => r.pressureSetpoint)).toFixed(1)),
       bypass: Number(avg(rows.map((r) => r.bypass)).toFixed(1)),
       bombasOperando: Number((avg(rows.map((r) => r.pumpsOn)) * 25).toFixed(1)),
     };
@@ -407,7 +416,7 @@ function globalToLocalPeriod(value: string | null): PeriodKey {
 function TrendsPage() {
   const { data: apiPayload, loading, error } = useDashboardPeriod();
   const chillers = useMemo(
-    () => mergeChillersFromDashboard(apiPayload, mockChillers),
+    () => (apiPayload ? mergeChillersFromDashboard(apiPayload, trendTemplates) : []),
     [apiPayload],
   );
   const [context, setContext] = useState<ContextKey>("water");
@@ -434,6 +443,12 @@ function TrendsPage() {
     () => apiTrend.rows || buildTrendRows(period, group, chillers),
     [period, group, chillers, apiTrend.rows],
   );
+  if (loading || !apiPayload) {
+    return <div className="glass-card p-6 text-sm text-muted-foreground">Carregando tendências reais da API...</div>;
+  }
+  if (error) {
+    return <div className="glass-card border-status-warn/40 p-6 text-sm text-status-warn">{error}</div>;
+  }
   const metric = metricValue(context, data);
   const comparison = comparisonData(context, group, chillers);
   const distribution = distributionData(context);
@@ -618,16 +633,16 @@ function TrendsPage() {
           icon={TrendingDown}
         />
         <MiniKpi
-          label="Setpoint atingido"
-          value="68"
+          label="Amostras válidas"
+          value={fmt(apiTrend.kpis?.amostras_validas_pct ?? apiTrend.kpis?.cobertura_pct, 0)}
           unit="%"
-          delta="▼ 9% vs período anterior"
+          delta="calculado pela API"
           color="text-violet-300"
           icon={BatteryCharging}
         />
         <MiniKpi
           label="Temp. entrada média"
-          value="24,7"
+          value={fmt(metric.extraEntrada ?? apiTrend.kpis?.entrada_media, 1)}
           unit="°C"
           delta="▲ 2% vs período anterior"
           color="text-sky-300"
@@ -635,7 +650,7 @@ function TrendsPage() {
         />
         <MiniKpi
           label="Temp. saída média"
-          value="7,9"
+          value={fmt(metric.extraSaida ?? apiTrend.kpis?.saida_media, 1)}
           unit="°C"
           delta="▼ 1% vs período anterior"
           color="text-cyan-300"
@@ -643,7 +658,7 @@ function TrendsPage() {
         />
         <MiniKpi
           label="Máxima variação"
-          value={context === "pressure" ? "82" : "1,4"}
+          value={fmt(apiTrend.kpis?.maxima_variacao ?? metric.maximaVariacao, context === "pressure" ? 0 : 1)}
           unit={context === "pressure" ? "psi" : context === "pumps" ? "%" : "°C"}
           delta="18/06 às 14:00"
           color="text-yellow-300"
@@ -651,7 +666,7 @@ function TrendsPage() {
         />
         <MiniKpi
           label="Horas fora do padrão"
-          value="8,6"
+          value={fmt(apiTrend.kpis?.horas_fora_padrao, 1)}
           unit="h"
           delta="▲ 23% vs período anterior"
           color="text-rose-300"

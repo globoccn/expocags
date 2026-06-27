@@ -23,7 +23,7 @@ import pumpBlue from "@/assets/pump-blue.png";
 import pumpRed from "@/assets/pump-red.png";
 import pumpWhite from "@/assets/pump-white.png";
 import {
-  chillers as mockChillers,
+  chillers as pumpTemplates,
   type ChillerData,
   type ChillerId,
   type PumpData,
@@ -43,10 +43,10 @@ export const Route = createFileRoute("/pumps")({
 type PeriodKey = "d1" | "week" | "month";
 type PumpTrendContext = "pressure" | "pumps" | "bypass";
 
-const periodOptions: Array<{ key: PeriodKey; label: string; date: string }> = [
-  { key: "d1", label: "D-1", date: "19/06/2026" },
-  { key: "week", label: "Semana", date: "13/06 a 19/06" },
-  { key: "month", label: "Mês", date: "Junho/2026" },
+const periodOptions: Array<{ key: PeriodKey; label: string }> = [
+  { key: "d1", label: "D-1" },
+  { key: "week", label: "Semana" },
+  { key: "month", label: "Mês" },
 ];
 
 const pumpImages: Record<ChillerId, string> = {
@@ -128,8 +128,10 @@ const trendContexts: Record<
   },
 };
 
-function fmt(value: number, digits = 1) {
-  return value.toLocaleString("pt-BR", {
+function fmt(value: number | undefined | null, digits = 1) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return "--";
+  return n.toLocaleString("pt-BR", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
@@ -198,32 +200,24 @@ function pumpStarts(pump: PumpData, index: number) {
 }
 
 function buildPumpTrendData(group: ChillerData, period: PeriodKey) {
-  const total = periodPointCount(period);
-  const pressureBase = group.hydraulic.pressureLine;
-  const setpoint = group.hydraulic.pressureSetpoint;
-  const bypassBase = group.hydraulic.bypassValve;
-  const smoothing = period === "d1" ? 1 : period === "week" ? 0.7 : 0.48;
-
-  return Array.from({ length: total }, (_, index) => {
-    const wave = Math.sin(index / (period === "month" ? 3.5 : 1.8));
-    const drift = group.id === "red" ? -0.12 * Math.sin(index / 4) : 0.05 * Math.cos(index / 3);
-    const pressure = Number((pressureBase + wave * 0.12 * smoothing + drift).toFixed(2));
-    const bypass = Math.max(
-      0,
-      Math.min(100, Math.round(bypassBase + wave * 8 * smoothing + (group.id === "red" ? 4 : -2))),
-    );
-
-    return {
-      t: periodTickLabel(period, index),
-      pressure,
-      setpoint,
-      bypass,
-      bag1: 1,
-      bag2: group.id === "red" && index > total * 0.45 ? 0 : 1,
-      bag3: group.id === "red" && index > total * 0.25 && index < total * 0.7 ? 0 : 1,
-      bag4: group.id === "blue" ? (index > total * 0.75 ? 1 : 0) : 0,
-    };
-  });
+  const source =
+    group.series?.["pressoes" as keyof typeof group.series] ||
+    group.series?.["bombas" as keyof typeof group.series] ||
+    group.series?.["bypass" as keyof typeof group.series] ||
+    [];
+  if (Array.isArray(source) && source.length) {
+    return source.map((p: any, index: number) => ({
+      t: p.x || p.t || p.label || periodTickLabel(period, index),
+      pressure: Number(p.pressao_linha ?? p.pressao ?? p.pressure) || undefined,
+      setpoint: Number(p.setpoint ?? p.pressao_setpoint) || undefined,
+      bypass: Number(p.bypass ?? p.valvula_bypass) || undefined,
+      bag1: Number(p.bag1 ?? p.bag_1 ?? p.BAG1) || undefined,
+      bag2: Number(p.bag2 ?? p.bag_2 ?? p.BAG2) || undefined,
+      bag3: Number(p.bag3 ?? p.bag_3 ?? p.BAG3) || undefined,
+      bag4: Number(p.bag4 ?? p.bag_4 ?? p.BAG4) || undefined,
+    }));
+  }
+  return [];
 }
 
 function yAxisConfig(context: PumpTrendContext, group: ChillerData) {
@@ -374,7 +368,7 @@ function PumpCard({ pump, index }: { pump: PumpData; index: number }) {
 function PumpsPage() {
   const { period: globalPeriod, data: apiPayload, loading, error } = useDashboardPeriod();
   const chillers = useMemo(
-    () => mergePumpGroupsFromDashboard(apiPayload, mockChillers),
+    () => (apiPayload ? mergePumpGroupsFromDashboard(apiPayload, pumpTemplates) : []),
     [apiPayload],
   );
   const [activeId, setActiveId] = useState<ChillerId>("blue");
@@ -386,6 +380,15 @@ function PumpsPage() {
   };
   const [trendContext, setTrendContext] = useState<PumpTrendContext>("pressure");
   const active = chillers.find((group) => group.id === activeId) || chillers[0];
+  if (loading || !apiPayload) {
+    return <div className="glass-card p-6 text-sm text-muted-foreground">Carregando dados reais das bombas...</div>;
+  }
+  if (error) {
+    return <div className="glass-card border-status-warn/40 p-6 text-sm text-status-warn">{error}</div>;
+  }
+  if (!active) {
+    return <div className="glass-card p-6 text-sm text-muted-foreground">Nenhum dado de bombas disponível para o período selecionado.</div>;
+  }
   const status = groupStatus(active);
   const color = groupColors[active.id];
   const selectedPeriod = periodOptions.find((option) => option.key === period) || periodOptions[0];
@@ -425,7 +428,7 @@ function PumpsPage() {
             >
               {periodOptions.map((option) => (
                 <option key={option.key} value={option.key}>
-                  {option.label} · {option.date}
+                  {option.label}
                 </option>
               ))}
             </select>

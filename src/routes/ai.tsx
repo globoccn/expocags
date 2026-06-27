@@ -376,36 +376,38 @@ function SectionList({ title, items }: { title: string; items: string[] }) {
 }
 
 function AIPage() {
-  const { period, data: apiPayload } = useDashboardPeriod();
+  const { period, data: apiPayload, loading, error } = useDashboardPeriod();
   const aiData = normalizeAiPayload(apiPayload);
-  const diagnosticsToShow = aiData.diagnostics.length ? aiData.diagnostics : diagnostics;
+  if (loading || !apiPayload) {
+    return <div className="glass-card p-6 text-sm text-muted-foreground">Carregando análise real da API...</div>;
+  }
+  if (error) {
+    return <div className="glass-card border-status-warn/40 p-6 text-sm text-status-warn">{error}</div>;
+  }
+  const diagnosticsToShow = aiData.diagnostics;
   const quickQuestionsToShow = aiData.quickQuestions.length
     ? aiData.quickQuestions.map((text: string, index: number) => ({
         icon: quickQuestions[index % quickQuestions.length].icon,
         text,
       }))
-    : quickQuestions;
-  const recentEventsToShow = dashboardTimeline(apiPayload).length
-    ? dashboardTimeline(apiPayload)
-        .slice(0, 5)
-        .map((e: any) => ({
-          time: e.time,
-          text: `${e.title} — ${e.equipment}`,
-          tone: String(e.severity).toLowerCase().includes("crit")
-            ? ("crit" as Severity)
-            : String(e.severity).toLowerCase().includes("aten")
-              ? ("warn" as Severity)
-              : ("ok" as Severity),
-        }))
-    : recentEvents;
-  const priorityActionsToShow = aiData.recommendations.length
-    ? aiData.recommendations
-        .slice(0, 5)
-        .map((text: string, index: number) => ({
-          text,
-          severity: index < 2 ? ("crit" as Severity) : ("warn" as Severity),
-        }))
-    : priorityActions;
+    : [];
+  const recentEventsToShow = dashboardTimeline(apiPayload)
+    .slice(0, 5)
+    .map((e: any) => ({
+      time: e.time,
+      text: `${e.title} — ${e.equipment}`,
+      tone: String(e.severity).toLowerCase().includes("crit")
+        ? ("crit" as Severity)
+        : String(e.severity).toLowerCase().includes("aten")
+          ? ("warn" as Severity)
+          : ("ok" as Severity),
+    }));
+  const priorityActionsToShow = aiData.recommendations
+    .slice(0, 5)
+    .map((text: string, index: number) => ({
+      text,
+      severity: index < 2 ? ("crit" as Severity) : ("warn" as Severity),
+    }));
   const summary = aiData.summary || {};
   return (
     <div className="space-y-5">

@@ -76,6 +76,7 @@ export function useDashboardPeriod() {
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
+    setData(null);
     setError(null);
     fetchDashboardPeriod(period, controller.signal)
       .then((payload) => setData(payload))
@@ -120,6 +121,17 @@ const firstNumber = (...values: any[]) => {
     if (Number.isFinite(n)) return n;
   }
   return undefined;
+};
+const firstPositiveNumber = (...values: any[]) => {
+  for (const value of values) {
+    const n = Number(value);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return undefined;
+};
+const positiveOrUndefined = (value: any) => {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? n : undefined;
 };
 const cleanPct = (value: any) => {
   if (typeof value === "string") return Number(value.replace("%", "").replace(",", "."));
@@ -370,10 +382,9 @@ export function mergeChillersFromDashboard<T extends { id: string }>(
   fallback: T[],
 ): T[] {
   const apiItems = asArray(payload?.chillers?.items || payload?.chillers);
-  if (!apiItems.length) return fallback;
-  return fallback.map((base: any) => {
-    const api = apiItems.find((x: any) => niceId(x.id) === base.id);
-    if (!api) return base;
+  if (!apiItems.length) return [] as T[];
+  return apiItems.map((api: any) => {
+    const base: any = fallback.find((x: any) => x.id === niceId(api.id)) || { id: niceId(api.id), name: api.name || `Chiller ${api.id}`, circuits: [], series: {} };
     const statusToneValue = api.status
       ? statusTone(api.status)
       : String(api.estado_atual || "")
@@ -384,29 +395,29 @@ export function mergeChillersFromDashboard<T extends { id: string }>(
     const trends = api.trends || {};
     const mapWater = (p: any) => ({
       t: p.x || p.t || p.label || "",
-      feed: firstNumber(p.saida, p.feed),
-      ret: firstNumber(p.entrada, p.ret),
-      set: firstNumber(p.setpoint, p.set),
+      feed: firstPositiveNumber(p.saida, p.feed),
+      ret: firstPositiveNumber(p.entrada, p.ret),
+      set: firstPositiveNumber(p.setpoint, p.set),
     });
     const mapDelta = (p: any) => ({
       t: p.x || p.t || p.label || "",
-      v: firstNumber(p.delta_t, p.deltaT, p.v),
+      v: firstPositiveNumber(p.delta_t_operacional, p.delta_t_ag_operacional, p.delta_t, p.deltaT, p.v),
     });
     const mapCap = (p: any) => ({
       t: p.x || p.t || p.label || "",
-      total: firstNumber(p.total, p.capacidade_total),
-      a: firstNumber(p.circuito_a, p.a),
-      b: firstNumber(p.circuito_b, p.b),
+      total: firstPositiveNumber(p.total, p.capacidade_total),
+      a: firstPositiveNumber(p.circuito_a, p.a),
+      b: firstPositiveNumber(p.circuito_b, p.b),
     });
     const mapPressHigh = (p: any) => ({
       t: p.x || p.t || p.label || "",
-      a: (firstNumber(p.descarga_a, p.pressao_descarga_a, p.a) ?? 0) / 50,
-      b: (firstNumber(p.descarga_b, p.pressao_descarga_b, p.b) ?? 0) / 50,
+      a: (firstPositiveNumber(p.descarga_a, p.pressao_descarga_a, p.a) ?? 0) / 50,
+      b: (firstPositiveNumber(p.descarga_b, p.pressao_descarga_b, p.b) ?? 0) / 50,
     });
     const mapPressLow = (p: any) => ({
       t: p.x || p.t || p.label || "",
-      a: (firstNumber(p.succao_a, p.pressao_succao_a, p.a) ?? 0) / 50,
-      b: (firstNumber(p.succao_b, p.pressao_succao_b, p.b) ?? 0) / 50,
+      a: (firstPositiveNumber(p.succao_a, p.pressao_succao_a, p.a) ?? 0) / 50,
+      b: (firstPositiveNumber(p.succao_b, p.pressao_succao_b, p.b) ?? 0) / 50,
     });
     return {
       ...base,
@@ -421,28 +432,28 @@ export function mergeChillersFromDashboard<T extends { id: string }>(
         api.score ??
         api.healthScore ??
         (statusToneValue === "crit" ? 55 : statusToneValue === "warn" ? 72 : 90),
-      capacityTotal: firstNumber(api.capacidade?.avg, api.capacidade_total, base.capacityTotal),
-      capacityA: firstNumber(api.capacidade?.circuito_a_avg, base.capacityA),
-      capacityB: firstNumber(api.capacidade?.circuito_b_avg, base.capacityB),
-      setpoint: firstNumber(api.setpoint?.avg, base.setpoint),
-      feedTemp: firstNumber(api.temperaturas?.saida_avg, base.feedTemp),
-      returnTemp: firstNumber(api.temperaturas?.retorno_avg, base.returnTemp),
-      deltaT: firstNumber(api.delta_t?.avg, api.delta_t_medio, base.deltaT),
-      externalTemp: firstNumber(api.temperaturas?.externa_avg, base.externalTemp),
-      demandLimit: firstNumber(api.limite_demanda_avg, base.demandLimit),
-      operatingHours: firstNumber(
+      capacityTotal: firstPositiveNumber(api.capacidade?.avg, api.capacidade_total) ?? 0,
+      capacityA: firstPositiveNumber(api.capacidade?.circuito_a_avg) ?? 0,
+      capacityB: firstPositiveNumber(api.capacidade?.circuito_b_avg) ?? 0,
+      setpoint: firstPositiveNumber(api.setpoint?.avg) ?? 0,
+      feedTemp: firstPositiveNumber(api.temperaturas?.saida_avg) ?? 0,
+      returnTemp: firstPositiveNumber(api.temperaturas?.retorno_avg, api.temperaturas?.entrada_avg) ?? 0,
+      deltaT: firstPositiveNumber(api.delta_t?.operacional_avg, api.delta_t?.avg, api.delta_t_ag_operacional, api.delta_t_medio) ?? 0,
+      externalTemp: firstPositiveNumber(api.temperaturas?.externa_avg) ?? 0,
+      demandLimit: firstPositiveNumber(api.limite_demanda_avg) ?? 0,
+      operatingHours: (firstPositiveNumber(
         api.tempo_ligado_horas,
         api.operacao?.horas,
         api.horas_operacao,
-        base.operatingHours,
-      ),
-      starts: firstNumber(
+      ) ?? 0) * 1000,
+      starts: firstPositiveNumber(
         api.partidas_estimadas,
         api.operacao?.partidas,
         api.numero_partidas_final,
-        base.starts,
-      ),
-      alarms: firstNumber(api.alarmes?.ocorrencias_amostras, base.alarms),
+      ) ?? 0,
+      lastUpdated: api.updated_at || api.ultima_atualizacao || payload?.generated_at || null,
+      setpointAtingido: firstPositiveNumber(api.setpoint?.atingido_pct, api.setpoint_atingido_pct, api.percentual_setpoint_atingido),
+      alarms: firstPositiveNumber(api.alarmes?.ocorrencias_amostras) ?? 0,
       activeAlarms: asArray(api.issues)
         .map((i: any) => i.title)
         .concat(
@@ -462,21 +473,19 @@ export function mergeChillersFromDashboard<T extends { id: string }>(
           const circ = api.circuitos?.[c.id] || {};
           return {
             ...c,
-            capacity: firstNumber(circ.capacidade_avg, c.capacity),
-            highPressure: firstNumber(circ.pressao_descarga_avg, c.highPressure * 50) / 50,
-            lowPressure: firstNumber(circ.pressao_succao_avg, c.lowPressure * 50) / 50,
+            capacity: firstPositiveNumber(circ.capacidade_avg) ?? 0,
+            highPressure: (firstPositiveNumber(circ.pressao_descarga_avg) ?? 0) / 50,
+            lowPressure: (firstPositiveNumber(circ.pressao_succao_avg) ?? 0) / 50,
             oilPressureC1:
-              firstNumber(
+              (firstPositiveNumber(
                 circ.pressao_oleo_cp1_avg,
                 circ.pressao_oleo_cpr1_avg,
-                c.oilPressureC1 * 100,
-              ) / 100,
+              ) ?? 0) / 100,
             oilPressureC2:
-              firstNumber(
+              (firstPositiveNumber(
                 circ.pressao_oleo_cp2_avg,
                 circ.pressao_oleo_cpr2_avg,
-                c.oilPressureC2 * 100,
-              ) / 100,
+              ) ?? 0) / 100,
             compressor1Status: String(circ.compressor_1_atual || "")
               .toLowerCase()
               .includes("ligado")
@@ -494,24 +503,23 @@ export function mergeChillersFromDashboard<T extends { id: string }>(
         feedReturnSetpoint:
           asArray(trends.agua_gelada)
             .map(mapWater)
-            .filter((p: any) => p.feed != null || p.ret != null) || base.series?.feedReturnSetpoint,
+            .filter((p: any) => p.feed != null || p.ret != null),
         deltaT:
           asArray(trends.agua_gelada)
             .map(mapDelta)
-            .filter((p: any) => p.v != null) || base.series?.deltaT,
+            .filter((p: any) => p.v != null),
         capacity:
           asArray(trends.capacidade)
             .map(mapCap)
-            .filter((p: any) => p.total != null || p.a != null || p.b != null) ||
-          base.series?.capacity,
+            .filter((p: any) => p.total != null || p.a != null || p.b != null),
         pressureHigh:
           asArray(trends.pressoes)
             .map(mapPressHigh)
-            .filter((p: any) => p.a || p.b) || base.series?.pressureHigh,
+            .filter((p: any) => p.a > 0 || p.b > 0),
         pressureLow:
           asArray(trends.pressoes)
             .map(mapPressLow)
-            .filter((p: any) => p.a || p.b) || base.series?.pressureLow,
+            .filter((p: any) => p.a > 0 || p.b > 0),
       },
     };
   });
@@ -522,10 +530,9 @@ export function mergePumpGroupsFromDashboard<T extends { id: string }>(
   fallback: T[],
 ): T[] {
   const apiItems = asArray(payload?.bombas?.items || payload?.bombas);
-  if (!apiItems.length) return fallback;
-  return fallback.map((base: any) => {
-    const api = apiItems.find((x: any) => niceId(x.id) === base.id);
-    if (!api) return base;
+  if (!apiItems.length) return [] as T[];
+  return apiItems.map((api: any) => {
+    const base: any = fallback.find((x: any) => x.id === niceId(api.id)) || { id: niceId(api.id), name: api.name || `Chiller ${api.id}`, circuits: [], series: {} };
     const pressureLine =
       firstNumber(
         api.pressao_linha?.avg,
@@ -613,17 +620,17 @@ export function normalizeTrendsPayload(payload: any, context: string, group: str
   const source = asArray(ctx.series || ctx.data || ctx.rows || ctx.trends);
   const rows = source.map((p: any) => ({
     t: p.x || p.t || p.label || p.data || p.timestamp || "",
-    entrada: firstNumber(p.entrada, p.temp_entrada, p.ret),
-    saida: firstNumber(p.saida, p.temp_saida, p.feed),
-    setpoint: firstNumber(p.setpoint, p.set),
-    deltaT: firstNumber(p.delta_t, p.deltaT),
-    capacidade: firstNumber(p.capacidade, p.total, p.media),
-    capacidadeA: firstNumber(p.circuito_a, p.capacidade_a, p.a),
-    capacidadeB: firstNumber(p.circuito_b, p.capacidade_b, p.b),
-    succao: firstNumber(p.succao, p.succao_media),
-    descarga: firstNumber(p.descarga, p.descarga_media),
-    oleo: firstNumber(p.oleo, p.pressao_oleo),
-    pressure: firstNumber(p.pressao, p.pressao_linha),
+    entrada: firstPositiveNumber(p.entrada, p.temp_entrada, p.ret),
+    saida: firstPositiveNumber(p.saida, p.temp_saida, p.feed),
+    setpoint: firstPositiveNumber(p.setpoint, p.set),
+    deltaT: firstPositiveNumber(p.delta_t, p.deltaT),
+    capacidade: firstPositiveNumber(p.capacidade, p.total, p.media),
+    capacidadeA: firstPositiveNumber(p.circuito_a, p.capacidade_a, p.a),
+    capacidadeB: firstPositiveNumber(p.circuito_b, p.capacidade_b, p.b),
+    succao: firstPositiveNumber(p.succao, p.succao_media),
+    descarga: firstPositiveNumber(p.descarga, p.descarga_media),
+    oleo: firstPositiveNumber(p.oleo, p.pressao_oleo),
+    pressure: firstPositiveNumber(p.pressao, p.pressao_linha),
     bypass: firstNumber(p.bypass, p.valvula_bypass),
   }));
   return {

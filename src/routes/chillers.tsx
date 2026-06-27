@@ -23,14 +23,13 @@ import chillerBlue from "@/assets/chiller-blue.png";
 import chillerRed from "@/assets/chiller-red.png";
 import chillerWhite from "@/assets/chiller-white.png";
 import {
-  aiInsights,
-  chillerTheme,
-  chillers as mockChillers,
-  events,
+  chillers as chillerTemplates,
   type ChillerData,
   type ChillerId,
 } from "@/data/mockCagData";
 import {
+  dashboardRecommendations,
+  dashboardTimeline,
   mergeChillersFromDashboard,
   useDashboardPeriod,
   type UiPeriod,
@@ -45,10 +44,10 @@ export const Route = createFileRoute("/chillers")({
 type PeriodKey = "d1" | "week" | "month";
 type TrendContext = "water" | "capacity" | "pressure";
 
-const periodOptions: Array<{ key: PeriodKey; label: string; date: string }> = [
-  { key: "d1", label: "D-1", date: "19/06/2026" },
-  { key: "week", label: "Semana", date: "13/06 a 19/06" },
-  { key: "month", label: "Mês", date: "Junho/2026" },
+const periodOptions: Array<{ key: PeriodKey; label: string }> = [
+  { key: "d1", label: "D-1" },
+  { key: "week", label: "Semana" },
+  { key: "month", label: "Mês" },
 ];
 
 const chillerImages: Record<ChillerId, string> = {
@@ -84,15 +83,18 @@ const chillerColors: Record<
   },
 };
 
-function fmt(value: number, digits = 1) {
-  return value.toLocaleString("pt-BR", {
+function fmt(value: number | undefined | null, digits = 1) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return "--";
+  return n.toLocaleString("pt-BR", {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
 }
 
-function psi(value: number) {
-  return Math.round(value * 50);
+function psi(value: number | undefined | null) {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.round(n * 50) : undefined;
 }
 
 function chillerStatus(chiller: ChillerData) {
@@ -113,12 +115,14 @@ function chillerStatus(chiller: ChillerData) {
 
 function circuitSummary(chiller: ChillerData, circuitId: "A" | "B") {
   const circuit = chiller.circuits.find((c) => c.id === circuitId) || chiller.circuits[0];
-  const hasAttention = chiller.risk !== "ok" && circuitId === "B" && chiller.id === "red";
+  const hasAttention = chiller.risk !== "ok";
+  const suction = psi(circuit.lowPressure);
+  const discharge = psi(circuit.highPressure);
   return {
     title: `Circuito ${circuitId}`,
     capacity: circuitId === "A" ? chiller.capacityA : chiller.capacityB,
-    suction: psi(circuit.lowPressure),
-    discharge: psi(circuit.highPressure),
+    suction,
+    discharge,
     oil: hasAttention ? "Atenção" : "Normal",
     fans: "4/4",
     compressor1: circuit.compressor1Status === "on" ? "Operando" : "Standby",
@@ -153,27 +157,33 @@ function sampleSeries<T>(series: T[], index: number, total: number) {
 
 function buildTrendData(chiller: ChillerData, period: PeriodKey) {
   const total = periodPointCount(period);
-  return Array.from({ length: total }, (_, index) => {
-    const water = sampleSeries(chiller.series.feedReturnSetpoint, index, total);
-    const delta = sampleSeries(chiller.series.deltaT, index, total);
-    const capacity = sampleSeries(chiller.series.capacity, index, total);
-    const high = sampleSeries(chiller.series.pressureHigh, index, total);
-    const low = sampleSeries(chiller.series.pressureLow, index, total);
-    const smoothing = period === "d1" ? 1 : period === "week" ? 0.72 : 0.52;
-    const wave = Math.sin(index / (period === "month" ? 3.4 : 1.7));
-
+  const maxLen = Math.max(
+    chiller.series?.feedReturnSetpoint?.length || 0,
+    chiller.series?.deltaT?.length || 0,
+    chiller.series?.capacity?.length || 0,
+    chiller.series?.pressureHigh?.length || 0,
+    chiller.series?.pressureLow?.length || 0,
+  );
+  const points = maxLen > 0 ? Math.min(maxLen, total) : 0;
+  return Array.from({ length: points }, (_, index) => {
+    const water = sampleSeries(chiller.series.feedReturnSetpoint || [], index, points);
+    const delta = sampleSeries(chiller.series.deltaT || [], index, points);
+    const capacity = sampleSeries(chiller.series.capacity || [], index, points);
+    const high = sampleSeries(chiller.series.pressureHigh || [], index, points);
+    const low = sampleSeries(chiller.series.pressureLow || [], index, points);
+    const label = water?.t || delta?.t || capacity?.t || high?.t || low?.t || periodTickLabel(period, index);
     return {
-      t: periodTickLabel(period, index),
-      entrada: Number(((water?.ret ?? chiller.returnTemp) + wave * 0.18 * smoothing).toFixed(2)),
-      saida: Number(((water?.feed ?? chiller.feedTemp) + wave * 0.12 * smoothing).toFixed(2)),
-      setpoint: chiller.setpoint,
-      deltaT: Number(((delta?.v ?? chiller.deltaT) + wave * 0.08 * smoothing).toFixed(2)),
-      capacidadeA: Number(((capacity?.a ?? chiller.capacityA) + wave * 2.2 * smoothing).toFixed(1)),
-      capacidadeB: Number(((capacity?.b ?? chiller.capacityB) - wave * 1.7 * smoothing).toFixed(1)),
-      succaoA: Math.round((low?.a ?? 4.8) * 50),
-      succaoB: Math.round((low?.b ?? 4.7) * 50),
-      descargaA: Math.round((high?.a ?? 16.2) * 50),
-      descargaB: Math.round((high?.b ?? 16.0) * 50),
+      t: label,
+      entrada: water?.ret,
+      saida: water?.feed,
+      setpoint: water?.set,
+      deltaT: delta?.v,
+      capacidadeA: capacity?.a,
+      capacidadeB: capacity?.b,
+      succaoA: low?.a ? Math.round(low.a * 50) : undefined,
+      succaoB: low?.b ? Math.round(low.b * 50) : undefined,
+      descargaA: high?.a ? Math.round(high.a * 50) : undefined,
+      descargaB: high?.b ? Math.round(high.b * 50) : undefined,
     };
   });
 }
@@ -248,7 +258,7 @@ function trendYAxisConfig(context: TrendContext) {
 function ChillersPage() {
   const { period: globalPeriod, data: apiPayload, loading, error } = useDashboardPeriod();
   const chillers = useMemo(
-    () => mergeChillersFromDashboard(apiPayload, mockChillers),
+    () => (apiPayload ? mergeChillersFromDashboard(apiPayload, chillerTemplates) : []),
     [apiPayload],
   );
   const [activeId, setActiveId] = useState<ChillerId>("blue");
@@ -261,6 +271,17 @@ function ChillersPage() {
   const [trendContext, setTrendContext] = useState<TrendContext>("water");
   const active = chillers.find((c) => c.id === activeId) || chillers[0];
   const selectedPeriod = periodOptions.find((p) => p.key === period) || periodOptions[0];
+  if (loading || !apiPayload) {
+    return <div className="glass-card p-6 text-sm text-muted-foreground">Carregando dados reais dos chillers...</div>;
+  }
+  if (error) {
+    return <div className="glass-card border-status-warn/40 p-6 text-sm text-status-warn">{error}</div>;
+  }
+  if (!active) {
+    return <div className="glass-card p-6 text-sm text-muted-foreground">Nenhum dado de chiller disponível para o período selecionado.</div>;
+  }
+  const selectedDateLabel = apiPayload?.period?.label || selectedPeriod.label;
+  const selectedDateDetail = apiPayload?.period?.date || apiPayload?.period?.range || apiPayload?.period?.end_date || "período selecionado";
   const status = chillerStatus(active);
   const trendData = useMemo(() => buildTrendData(active, period), [active, period]);
   const activeTrend = trendContexts[trendContext];
@@ -297,7 +318,7 @@ function ChillersPage() {
             >
               {periodOptions.map((p) => (
                 <option key={p.key} value={p.key}>
-                  {p.label} · {p.date}
+                  {p.label}
                 </option>
               ))}
             </select>
@@ -387,7 +408,7 @@ function ChillersPage() {
                   label="Horas de operação"
                   value={`${fmt(active.operatingHours / 1000, 1)} h`}
                 />
-                <Metric label="Última atualização" value="19/06/2026 06:55" />
+                <Metric label="Última atualização" value={(active as any).lastUpdated ? new Date((active as any).lastUpdated).toLocaleString("pt-BR") : "--"} />
               </div>
             </div>
           </div>
@@ -403,16 +424,7 @@ function ChillersPage() {
                 valueClassName={status.tone === "ok" ? "text-status-ok" : "text-status-crit"}
               />
               <Metric label="Setpoint" value={`${fmt(active.setpoint, 1)} °C`} />
-              <Metric
-                label="Setpoint atingido"
-                value={active.id === "red" ? "18%" : active.id === "white" ? "88%" : "92%"}
-              />
-              <Metric
-                label="Vazão estimada"
-                value={
-                  active.id === "red" ? "430 m³/h" : active.id === "white" ? "390 m³/h" : "410 m³/h"
-                }
-              />
+
             </div>
           </div>
 
@@ -530,9 +542,9 @@ function ChillersPage() {
             <button className="text-xs font-semibold text-status-ai">Ver todos</button>
           </div>
           <div className="space-y-3">
-            {recentEvents(active.id).map((event) => (
+            {dashboardTimeline(apiPayload).filter((event: any) => String(event.equipment || "").toLowerCase().includes(active.name.toLowerCase().split(" ").pop() || "")).slice(0,4).map((event: any) => (
               <div
-                key={event.time + event.text}
+                key={event.id || event.time + event.title}
                 className="flex items-center gap-3 rounded-xl border border-border/35 bg-background/25 p-3 text-xs"
               >
                 <span className="grid h-7 w-7 place-items-center rounded-full bg-primary/12 text-primary">
@@ -540,7 +552,7 @@ function ChillersPage() {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="font-mono font-semibold text-foreground">{event.time}</div>
-                  <div className="truncate text-muted-foreground">{event.text}</div>
+                  <div className="truncate text-muted-foreground">{event.title}</div>
                 </div>
                 <span className="rounded-full border border-status-info/30 bg-status-info/10 px-2 py-0.5 text-[10px] text-status-info">
                   Informação
@@ -553,16 +565,16 @@ function ChillersPage() {
         <div className="glass-card p-5">
           <SectionTitle>Ações recomendadas</SectionTitle>
           <div className="mt-6 flex min-h-48 flex-col justify-center gap-5">
-            {recommendedActions(active).length ? (
-              recommendedActions(active).map((action, index) => (
+            {dashboardRecommendations(apiPayload).length ? (
+              dashboardRecommendations(apiPayload).slice(0,3).map((action: any, index: number) => (
                 <div
-                  key={action}
+                  key={typeof action === "string" ? action : action.title || index}
                   className="flex gap-3 rounded-xl border border-border/35 bg-background/25 p-3"
                 >
                   <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/15 text-xs font-bold text-primary">
                     {index + 1}
                   </span>
-                  <p className="text-sm font-semibold">{action}</p>
+                  <p className="text-sm font-semibold">{typeof action === "string" ? action : action.title || action.text}</p>
                 </div>
               ))
             ) : (
@@ -585,8 +597,7 @@ function ChillersPage() {
       <div className="glass-card flex items-center gap-3 px-5 py-3 text-xs text-muted-foreground">
         <Info className="h-4 w-4 text-primary" />
         <span>
-          Os dados apresentados são baseados no período selecionado: {selectedPeriod.label} (
-          {selectedPeriod.date}).
+          Os dados apresentados são baseados no período selecionado: {selectedDateLabel} ({selectedDateDetail}).
         </span>
       </div>
     </div>
@@ -702,8 +713,8 @@ function CircuitCard({ chiller, circuitId }: { chiller: ChillerData; circuitId: 
             />
           </div>
         </div>
-        <CircuitMetric label="Sucção média" value={`${circuit.suction} psi`} />
-        <CircuitMetric label="Descarga média" value={`${circuit.discharge} psi`} />
+        <CircuitMetric label="Sucção média" value={circuit.suction ? `${circuit.suction} psi` : "--"} />
+        <CircuitMetric label="Descarga média" value={circuit.discharge ? `${circuit.discharge} psi` : "--"} />
         <CircuitMetric
           label="Óleo CP1/CP2"
           value={circuit.oil}
