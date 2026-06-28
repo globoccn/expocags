@@ -80,6 +80,73 @@ type HomeOccurrence = { title: string; desc: string; time: string; level: "Aten�
 type HomeRecommendation = { title: string; desc: string };
 type HomeChillerStatus = { id: "azul" | "vermelho" | "branco"; name: string; status: "Normal" | "Atenção"; hours: string; deltaT: string; setpoint: string; compare: string; note: string; tone: Tone };
 
+const toneClasses: Record<Tone, { text: string; border: string; bg: string; glow: string; soft: string }> = {
+  info: {
+    text: "text-primary",
+    border: "border-primary/35",
+    bg: "bg-primary/10",
+    glow: "shadow-[0_0_34px_rgba(0,180,255,0.16)]",
+    soft: "from-primary/22",
+  },
+  ok: {
+    text: "text-status-ok",
+    border: "border-status-ok/35",
+    bg: "bg-status-ok/10",
+    glow: "shadow-[0_0_34px_oklch(0.82_0.22_150_/_0.12)]",
+    soft: "from-status-ok/18",
+  },
+  warn: {
+    text: "text-status-warn",
+    border: "border-status-warn/35",
+    bg: "bg-status-warn/10",
+    glow: "shadow-[0_0_34px_oklch(0.88_0.2_95_/_0.12)]",
+    soft: "from-status-warn/20",
+  },
+  crit: {
+    text: "text-status-crit",
+    border: "border-status-crit/35",
+    bg: "bg-status-crit/10",
+    glow: "shadow-[0_0_34px_oklch(0.7_0.28_22_/_0.12)]",
+    soft: "from-status-crit/18",
+  },
+  ai: {
+    text: "text-status-ai",
+    border: "border-status-ai/40",
+    bg: "bg-status-ai/10",
+    glow: "shadow-[0_0_40px_oklch(0.75_0.24_300_/_0.16)]",
+    soft: "from-status-ai/22",
+  },
+};
+
+const chillerAccent = {
+  azul: "oklch(0.82 0.22 230)",
+  vermelho: "oklch(0.72 0.28 22)",
+  branco: "oklch(0.9 0.02 240)",
+};
+
+const chillerImages = {
+  azul: chillerBlue,
+  vermelho: chillerRed,
+  branco: chillerWhite,
+};
+
+function Delta({ tone, value }: { tone: "up" | "down" | "neutral"; value: string }) {
+  const classes =
+    tone === "up"
+      ? "text-status-ok"
+      : tone === "down"
+        ? "text-status-ok"
+        : "text-muted-foreground";
+  const symbol = tone === "up" ? "▲" : tone === "down" ? "▼" : "—";
+  return <span className={cn("font-mono font-semibold", classes)}>{symbol} {value}</span>;
+}
+
+function StatusPill({ tone, children }: { tone: Tone; children: ReactNode }) {
+  const t = toneClasses[tone];
+  return <span className={cn("inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-bold", t.border, t.bg, t.text)}>{children}</span>;
+}
+
+
 function KpiCard({ item }: { item: HomeKpi }) {
   const Icon = item.icon;
   const t = toneClasses[item.tone];
