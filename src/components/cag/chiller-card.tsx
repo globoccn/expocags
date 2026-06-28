@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Activity, AlertTriangle, Droplets, Gauge, Thermometer, Wind } from "lucide-react";
-import type { ChillerData } from "@/data/cagTypes";
-import { chillerTheme } from "@/data/cagTypes";
+import type { ChillerData } from "@/data/mockCagData";
+import { chillerTheme } from "@/data/mockCagData";
 import { EquipmentRender } from "./equipment-render";
 import { HealthRing } from "./health-score";
 import { RiskBadge, StatusBadge } from "./badges";

@@ -3,7 +3,7 @@ import { AlertTriangle, CheckCircle2, Info, Sparkles } from "lucide-react";
 import chillerBlue from "@/assets/chiller-blue.png";
 import chillerRed from "@/assets/chiller-red.png";
 import chillerWhite from "@/assets/chiller-white.png";
-import { chillerInsight, chillerTheme, type ChillerData } from "@/data/cagTypes";
+import { chillerInsight, chillerTheme, type ChillerData } from "@/data/mockCagData";
 import { cn } from "@/lib/utils";
 
 const chillerImageById: Record<string, string> = {

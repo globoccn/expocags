@@ -23,7 +23,7 @@ export function Sparkline({
   height?: number;
 }) {
   const color = palette[tone] ?? palette.default;
-  const id = `sp-${tone}-${values.length}`;
+  const id = `sp-${tone}-${Math.random().toString(36).slice(2, 7)}`;
   return (
     <div style={{ width: "100%", height }}>
       <ResponsiveContainer>

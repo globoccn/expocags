@@ -10,8 +10,8 @@ import {
   Settings,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
-import { useDashboard } from "@/lib/dashboard-api";
+import { useEffect } from "react";
+import { useDashboardPeriod } from "@/lib/dashboard-api";
 import { cn } from "@/lib/utils";
 import centerNorteLogo from "@/assets/center-norte-logo.jpg";
 
@@ -28,8 +28,8 @@ const nav = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { uiPeriod: period, setUiPeriod, data } = useDashboard();
   const [now, setNow] = useState("");
+  const [period, setPeriod] = useDashboardPeriod();
 
   useEffect(() => {
     const tick = () => {
@@ -125,11 +125,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                   key={p.value}
                   type="button"
                   onClick={() => {
-                    setUiPeriod(p.value as any);
+                    setPeriod(p.value === "7d" ? "week" : p.value === "1m" ? "month" : "d1");
                   }}
                   className={cn(
                     "min-w-16 rounded-full px-3 py-1.5 font-semibold transition-all",
-                    period === p.value
+                    period === (p.value === "7d" ? "week" : p.value === "1m" ? "month" : "d1")
                       ? "bg-primary/25 text-primary shadow-[0_0_18px_rgba(0,180,255,0.25),inset_0_0_14px_rgba(0,180,255,0.12)]"
                       : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
                   )}
@@ -141,12 +141,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="hidden items-center gap-3 rounded-full border border-border/60 bg-surface-2/55 px-3 py-1.5 text-[10px] text-muted-foreground shadow-[inset_0_0_16px_rgba(255,255,255,0.03)] xl:flex">
               <div className="flex items-center gap-1.5">
                 <span className="uppercase tracking-[0.16em] opacity-70">Dados da base</span>
-                <span className="font-mono font-semibold text-foreground/85">{data?.end_date || data?.date || "--"}</span>
+                <span className="font-mono font-semibold text-foreground/85">19/06/2026 (D-1)</span>
               </div>
               <span className="h-4 w-px bg-border/70" />
               <div className="flex items-center gap-1.5">
                 <span className="uppercase tracking-[0.16em] opacity-70">Atualizado</span>
-                <span className="font-mono font-semibold text-foreground/85">{data?.generated_at ? new Date(data.generated_at).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" }) : "--"}</span>
+                <span className="font-mono font-semibold text-foreground/85">20/06/2026 06:05</span>
               </div>
             </div>
             <div className="hidden font-mono text-xs text-muted-foreground md:block">{now}</div>

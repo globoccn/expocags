@@ -183,7 +183,7 @@ function ReportsPage() {
 
       const base64 = data?.pdf?.base64;
       if (!base64) {
-        throw new Error("Não foi possível gerar o PDF solicitado.");
+        throw new Error("Não foi possível gerar o PDF.");
       }
 
       const filename = data?.pdf?.filename || "demonstrativo-agua.pdf";
