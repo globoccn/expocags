@@ -41,25 +41,26 @@ export async function fetchDashboardPeriod(period: UiPeriod, signal?: AbortSigna
 }
 
 export function useGlobalPeriod() {
-  // Mantém SSR e primeiro render do cliente idênticos para evitar hydration mismatch.
-  // O valor salvo no navegador só é aplicado depois da hidratação.
-  const [period, setPeriod] = useState<UiPeriod>("d1");
+  const [period, setPeriod] = useState<UiPeriod>(() => {
+    if (typeof window === "undefined") return "d1";
+    const stored = window.localStorage.getItem("cag-period") as UiPeriod | null;
+    return stored === "7d" || stored === "1m" || stored === "d1" ? stored : "d1";
+  });
 
   useEffect(() => {
-    const readStored = () => {
-      const stored = window.localStorage.getItem("cag-period") as UiPeriod | null;
-      if (stored === "d1" || stored === "7d" || stored === "1m") setPeriod(stored);
-    };
-    readStored();
     const onChange = (event: Event) => {
       const detail = (event as CustomEvent).detail as UiPeriod | undefined;
       if (detail === "d1" || detail === "7d" || detail === "1m") setPeriod(detail);
     };
+    const onStorage = () => {
+      const stored = window.localStorage.getItem("cag-period") as UiPeriod | null;
+      if (stored === "d1" || stored === "7d" || stored === "1m") setPeriod(stored);
+    };
     window.addEventListener("cag-period-change", onChange);
-    window.addEventListener("storage", readStored);
+    window.addEventListener("storage", onStorage);
     return () => {
       window.removeEventListener("cag-period-change", onChange);
-      window.removeEventListener("storage", readStored);
+      window.removeEventListener("storage", onStorage);
     };
   }, []);
 
@@ -154,12 +155,10 @@ const severityTone = (value: any) => {
   return "ok";
 };
 const periodDateLabel = (payload: any, period: UiPeriod) => {
-  const p = payload?.period || payload || {};
-  const label = p.label || periodLabel(period);
-  if (p.date) return `${label} · ${p.date}`;
-  if (p.start_date && p.end_date && p.start_date !== p.end_date) return `${label} · ${p.start_date} a ${p.end_date}`;
-  if (p.end_date) return `${label} · ${p.end_date}`;
-  return label;
+  const p = payload?.period || {};
+  if (p.label && p.date) return `${p.label} · ${p.date}`;
+  if (p.label) return p.label;
+  return periodLabel(period);
 };
 
 export function normalizeHomePayload(payload: any, period: UiPeriod) {
@@ -171,7 +170,7 @@ export function normalizeHomePayload(payload: any, period: UiPeriod) {
   const alarmes = payload?.alarmes || {};
   const ai = payload?.assistente_ia || payload?.ia || {};
   const diagnostics = asArray(ai?.diagnosticos || payload?.diagnosticos_manutencao);
-  const cards = asArray(home?.cards || payload?.home_cards || home?.kpis);
+  const cards = asArray(home?.cards || home?.kpis);
   const cardBy = (id: string) =>
     cards.find((c: any) =>
       String(c.id || c.label || "")
@@ -181,7 +180,6 @@ export function normalizeHomePayload(payload: any, period: UiPeriod) {
 
   const coberturaRaw =
     cardBy("cobertura")?.value ??
-    payload?.coverage_pct ??
     payload?.data_quality?.coverage_pct ??
     periodInfo?.coverage_pct ??
     central?.coverage_pct;
@@ -386,11 +384,7 @@ export function mergeChillersFromDashboard<T extends { id: string }>(
   const apiItems = asArray(payload?.chillers?.items || payload?.chillers);
   if (!apiItems.length) return [] as T[];
   return apiItems.map((api: any) => {
-    const defaultCircuits = [
-      { id: "A", compressor1Status: "off", compressor2Status: "off" },
-      { id: "B", compressor1Status: "off", compressor2Status: "off" },
-    ];
-    const base: any = fallback.find((x: any) => x.id === niceId(api.id)) || { id: niceId(api.id), name: api.name || `Chiller ${api.id}`, circuits: defaultCircuits, series: {} };
+    const base: any = fallback.find((x: any) => x.id === niceId(api.id)) || { id: niceId(api.id), name: api.name || `Chiller ${api.id}`, circuits: [], series: {} };
     const statusToneValue = api.status
       ? statusTone(api.status)
       : String(api.estado_atual || "")
@@ -505,6 +499,7 @@ export function mergeChillersFromDashboard<T extends { id: string }>(
           };
         }) || base.circuits,
       series: {
+        ...base.series,
         feedReturnSetpoint:
           asArray(trends.agua_gelada)
             .map(mapWater)
@@ -539,24 +534,26 @@ export function mergePumpGroupsFromDashboard<T extends { id: string }>(
   return apiItems.map((api: any) => {
     const base: any = fallback.find((x: any) => x.id === niceId(api.id)) || { id: niceId(api.id), name: api.name || `Chiller ${api.id}`, circuits: [], series: {} };
     const pressureLine =
-      firstPositiveNumber(
-        api.pressao?.linha_avg,
+      firstNumber(
         api.pressao_linha?.avg,
         api.pressao_media,
         api.pressao_linha_avg,
+        base.hydraulic?.pressureLine,
       ) ?? 0;
     const pressureSetpoint =
-      firstPositiveNumber(
-        api.pressao?.setpoint_avg,
+      firstNumber(
         api.pressao_linha?.setpoint,
         api.setpoint_pressao,
         api.pressao_setpoint,
+        base.hydraulic?.pressureSetpoint,
+        pressureLine,
       ) ?? pressureLine;
     const bypass =
-      firstPositiveNumber(
+      firstNumber(
         api.bypass?.avg,
         api.bypass_avg,
         api.valvula_bypass_avg,
+        base.hydraulic?.bypassValve,
       ) ?? 0;
     const pumpsRaw = asArray(api.bombas || api.pumps || api.items_bombas);
     const pumps = (pumpsRaw.length ? pumpsRaw : [1, 2, 3, 4].map((n) => ({ id: `BAG${n}` }))).map(
@@ -602,6 +599,7 @@ export function mergePumpGroupsFromDashboard<T extends { id: string }>(
       },
       pumps,
       series: {
+        ...base.series,
         bombas: asArray(api.trends?.bombas || api.trends?.operacao),
         pressoes: asArray(api.trends?.pressoes),
         bypass: asArray(api.trends?.bypass),
@@ -619,11 +617,7 @@ export function normalizeTrendsPayload(payload: any, context: string, group: str
     pumps: "bombas",
   };
   const ctx = contexts[keyMap[context] || context] || {};
-  const groups = asArray(ctx.groups);
-  const selectedGroup = groups.find((g: any) => niceId(g.id) === niceId(group) || apiId(group) === String(g.id || "").toLowerCase()) || (group === "all" || group === "todos" ? null : groups[0]);
-  const source = selectedGroup
-    ? asArray(selectedGroup.series || selectedGroup.data || selectedGroup.rows || selectedGroup.trends)
-    : groups.flatMap((g: any) => asArray(g.series || g.data || g.rows || g.trends).map((row: any) => ({ ...row, group: g.id || g.name })));
+  const source = asArray(ctx.series || ctx.data || ctx.rows || ctx.trends);
   const rows = source.map((p: any) => ({
     t: p.x || p.t || p.label || p.data || p.timestamp || "",
     entrada: firstPositiveNumber(p.entrada, p.temp_entrada, p.ret),
@@ -647,8 +641,8 @@ export function normalizeTrendsPayload(payload: any, context: string, group: str
         payload?.tendencias?.comparativo_grupos ||
         ctx.comparativo,
     ),
-    distribuicao: asArray(selectedGroup?.distribution || selectedGroup?.distribuicao || ctx.distribuicao || ctx.distribution),
-    kpis: selectedGroup || ctx.kpis || ctx.resumo || {},
+    distribuicao: asArray(ctx.distribuicao || ctx.distribution),
+    kpis: ctx.kpis || ctx.resumo || {},
   };
 }
 
