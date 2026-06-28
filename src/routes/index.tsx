@@ -19,11 +19,10 @@ import {
   ThermometerSun,
   Wrench,
 } from "lucide-react";
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import chillerBlue from "@/assets/chiller-blue.png";
 import chillerRed from "@/assets/chiller-red.png";
 import chillerWhite from "@/assets/chiller-white.png";
-import { normalizeHomePayload, useDashboardPeriod } from "@/lib/cag-dashboard-api";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -702,22 +701,9 @@ function InfoFooter({ icon: Icon, label, value, detail }: { icon: typeof Calenda
 }
 
 function Index() {
-  const { period: globalPeriod, data: apiPayload, error, loading } = useDashboardPeriod();
-  const period: PeriodKey = globalPeriod === "7d" ? "week" : globalPeriod === "1m" ? "month" : "d1";
+  const [period, setPeriod] = useState<PeriodKey>("d1");
   const cfg = periodConfig[period];
-  const data = useMemo(() => {
-    if (!apiPayload) return null;
-    const normalized = normalizeHomePayload(apiPayload, globalPeriod);
-    const icons = [CircuitBoard, Droplets, AlertTriangle, Bell, LineChart];
-    return {
-      ...normalized,
-      kpis: normalized.kpis.map((k: any, index: number) => ({ ...k, icon: icons[index] || LineChart })),
-      occurrences: normalized.occurrences.map((o: any) => ({
-        ...o,
-        icon: o.tone === "crit" ? Gauge : o.tone === "warn" ? ThermometerSun : Fan,
-      })),
-    };
-  }, [apiPayload, globalPeriod]);
+  const data = periodData[period];
 
   const suggestedQuestions = useMemo(
     () => [
@@ -734,17 +720,6 @@ function Index() {
       <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-status-ai/10 blur-3xl" />
       <div className="pointer-events-none absolute left-1/4 top-40 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
 
-      {loading && (
-        <div className="glass-card p-4 text-sm text-muted-foreground">Carregando dados reais da API Dashboard...</div>
-      )}
-      {error && (
-        <div className="glass-card border-status-alert/40 bg-status-alert/10 p-4 text-sm text-status-alert">Falha ao carregar API Dashboard: {error}</div>
-      )}
-      {!loading && !error && !data ? (
-        <div className="glass-card p-4 text-sm text-muted-foreground">Nenhum payload disponível para o período selecionado.</div>
-      ) : null}
-
-      {data && (<>
       <section className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-primary/80">Centro de Inteligência Operacional</div>
@@ -759,7 +734,7 @@ function Index() {
                 <button
                   key={key}
                   type="button"
-                  onClick={() => { const ui = key === "week" ? "7d" : key === "month" ? "1m" : "d1"; window.localStorage.setItem("cag-period", ui); window.dispatchEvent(new CustomEvent("cag-period-change", { detail: ui })); }}
+                  onClick={() => setPeriod(key)}
                   className={cn(
                     "rounded-lg px-4 py-2 text-sm font-semibold transition-all",
                     period === key
@@ -775,7 +750,7 @@ function Index() {
           <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-surface-2/45 px-4 py-3">
             <CalendarDays className="h-4 w-4 text-primary" />
             <div className="text-right">
-              <div className="font-display text-sm font-semibold">{data.baseDate || cfg.short}</div>
+              <div className="font-display text-sm font-semibold">26 de Maio de 2025</div>
               <div className="text-[11px] text-muted-foreground">Base comparativa: {cfg.short}</div>
             </div>
           </div>
@@ -862,12 +837,11 @@ function Index() {
       </section>
 
       <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <InfoFooter icon={CalendarDays} label="Período analisado" value={data.analyzed || cfg.short} detail={`base ${data.baseDate || "--"}`} />
-        <InfoFooter icon={LineChart} label="Cobertura das leituras" value={data.coverage || "--"} detail="calculada no workflow operacional" />
-        <InfoFooter icon={Database} label="Origem dos dados" value="Redis/API" detail="Payload real da API Dashboard" />
+        <InfoFooter icon={CalendarDays} label="Período analisado" value={cfg.analyzed.split(" até ")[0]} detail={`até ${cfg.analyzed.split(" até ")[1]}`} />
+        <InfoFooter icon={LineChart} label="Cobertura das leituras" value={period === "month" ? "96%" : period === "week" ? "97%" : "98%"} detail={period === "d1" ? "+2 pp vs ontem" : `comparado ao período anterior`} />
+        <InfoFooter icon={Database} label="Dados coletados" value="100%" detail="Qualidade dos dados tratados" />
         <InfoFooter icon={Clock3} label="Atualização dos dados" value="07:00" detail="Diariamente pela manhã" />
       </section>
-      </>)}
     </div>
   );
 }
