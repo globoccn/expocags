@@ -23,7 +23,7 @@ import pumpBlue from "@/assets/pump-blue.png";
 import pumpRed from "@/assets/pump-red.png";
 import pumpWhite from "@/assets/pump-white.png";
 import { type ChillerData, type ChillerId, type PumpData } from "@/data/mockCagData";
-import { legacyChillers, useDashboard } from "@/lib/dashboard-api";
+import { legacyChillers, useDashboard, text, textInt, cardValue, cardRaw } from "@/lib/dashboard-api";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/pumps")({
@@ -134,43 +134,26 @@ function trendPeriodLabel(period: PeriodKey) {
 }
 
 function groupStatus(group: ChillerData) {
-  const criticalPumps = group.pumps.filter((pump) => pump.alarm || pump.mode === "local" || pump.pressureError < -0.3 || pump.bypassValve > 50);
-  const pumpsOn = group.pumps.filter((pump) => pump.status === "on").length;
-  const pressureError = group.hydraulic.pressureError;
-
-  if (criticalPumps.length || pressureError < -0.4 || group.hydraulic.bypassValve > 50) {
-    return {
-      label: "Atenção",
-      tone: "warn" as const,
-      occurrence: "Sistema operando com pressão abaixo do setpoint",
-      description: "Verificar condições das bombas e válvula de bypass.",
-      pumpsOn,
-    };
-  }
-
+  const ui = (group as any).pumpUi || {};
+  const tone = String(ui.status || "normal").toLowerCase().includes("crit") || String(ui.status || "").toLowerCase().includes("alert")
+    ? "warn"
+    : String(ui.status || "normal").toLowerCase().includes("aten") || String(ui.status || "").toLowerCase().includes("warn")
+      ? "warn"
+      : "ok";
   return {
-    label: "Normal",
-    tone: "ok" as const,
-    occurrence: "Sem ocorrências relevantes",
-    description: "Grupo hidráulico dentro dos parâmetros operacionais.",
-    pumpsOn,
+    label: ui.statusLabel || (tone === "ok" ? "Normal" : "Atenção"),
+    tone: tone as "ok" | "warn",
+    occurrence: ui.subtitle || "--",
+    description: ui.subtitle || "--",
+    pumpsOn: cardRaw(ui.cards, "bombas_ligadas") ?? "--",
   };
 }
 
 function pumpStatusLabel(pump: PumpData) {
-  if (pump.status === "fault" || pump.alarm) return { label: "Alarme", tone: "alert" as const };
-  if (pump.status === "on") return { label: "Ligada", tone: "ok" as const };
-  return { label: "Desligada", tone: "muted" as const };
-}
-
-function pumpHours(pump: PumpData, index: number) {
-  if (pump.status === "on") return Number((17.6 + index * 1.1).toFixed(1));
-  return Number((1.2 + index * 0.5).toFixed(1));
-}
-
-function pumpStarts(pump: PumpData, index: number) {
-  if (pump.status === "on") return 18 + index * 3;
-  return 2 + index;
+  const label = (pump as any).statusLabel || "--";
+  if (pump.status === "fault" || pump.alarm) return { label, tone: "alert" as const };
+  if (pump.status === "on") return { label, tone: "ok" as const };
+  return { label, tone: "muted" as const };
 }
 
 function buildPumpTrendData(group: ChillerData, _period: PeriodKey) {
@@ -190,13 +173,8 @@ function buildPumpTrendData(group: ChillerData, _period: PeriodKey) {
   }));
 }
 
-function yAxisConfig(context: PumpTrendContext, group: ChillerData) {
-  if (context === "pressure") {
-    const min = Math.max(0, Math.floor((group.hydraulic.pressureLine - 0.8) * 10) / 10);
-    const max = Math.ceil((group.hydraulic.pressureSetpoint + 0.6) * 10) / 10;
-    const mid = Number(((min + max) / 2).toFixed(1));
-    return { domain: [min, max] as [number, number], ticks: [min, mid, max] };
-  }
+function yAxisConfig(context: PumpTrendContext, _group: ChillerData) {
+  if (context === "pressure") return { domain: [0, 10] as [number, number], ticks: [0, 5, 10] };
   if (context === "pumps") return { domain: [-0.1, 1.1] as [number, number], ticks: [0, 1] };
   return { domain: [0, 100] as [number, number], ticks: [0, 25, 50, 75, 100] };
 }
@@ -212,37 +190,22 @@ function statusPill(tone: "ok" | "warn" | "alert" | "muted", label: string) {
 }
 
 function getEvents(group: ChillerData) {
-  if (group.id === "red") {
-    return [
-      { time: "06:45", label: "BAG 3 partida remota", tone: "info" as const },
-      { time: "06:12", label: "BAG 2 parada por baixa pressão", tone: "warn" as const },
-      { time: "03:18", label: "Válvula bypass com abertura elevada", tone: "warn" as const },
-      { time: "02:30", label: "Pressão abaixo do setpoint", tone: "warn" as const },
-    ];
-  }
-
-  return [
-    { time: "13:55", label: "Grupo em operação remota", tone: "info" as const },
-    { time: "11:20", label: "Pressão estabilizada", tone: "info" as const },
-    { time: "07:00", label: "Dados do período consolidados", tone: "info" as const },
-  ];
+  const events = ((group as any).pumpUi?.eventos || []) as any[];
+  return events.map((event) => ({
+    time: event.time || event.hora || "--",
+    label: event.label || event.text || event.title || event.titulo || event.detail || event.detalhe || "--",
+    tone: String(event.severidade || event.severity || event.tone || "").toLowerCase().includes("aten") ? "warn" as const : "info" as const,
+  }));
 }
 
 function getRecommendations(group: ChillerData) {
-  if (group.id === "red") {
-    return [
-      { title: "Verificar pressão da linha", detail: "Pressão média abaixo do setpoint no período." },
-      { title: "Inspecionar válvula bypass", detail: "Abertura elevada pode indicar recirculação excessiva." },
-      { title: "Validar operação da BAG 2", detail: "Bomba com parada associada à baixa pressão." },
-    ];
-  }
-
-  return [];
+  const actions = ((group as any).pumpUi?.acoes || []) as any[];
+  return actions.map((item) => typeof item === "string" ? { title: item, detail: "" } : { title: item.title || item.titulo || "--", detail: item.detail || item.detalhe || item.desc || "" });
 }
 
 function PumpCard({ pump, index }: { pump: PumpData; index: number }) {
   const status = pumpStatusLabel(pump);
-  const hasAttention = status.tone !== "ok" || pump.mode === "local" || pump.pressureError < -0.3 || pump.bypassValve > 50;
+  const hasAttention = status.tone !== "ok" || pump.mode === "local" || pump.alarm;
 
   return (
     <article className={cn("rounded-2xl border border-border/55 bg-surface-2/35 p-4", hasAttention && "border-status-warn/45 bg-status-warn/5")}> 
@@ -260,19 +223,19 @@ function PumpCard({ pump, index }: { pump: PumpData; index: number }) {
       <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
         <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Modo</p>
-          <p className={cn("mt-1 font-bold", pump.mode === "local" ? "text-status-warn" : "text-foreground")}>{pump.mode === "local" ? "Local" : "Remoto"}</p>
+          <p className={cn("mt-1 font-bold", pump.mode === "local" ? "text-status-warn" : "text-foreground")}>{(pump as any).modeLabel || "--"}</p>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Status</p>
-          <p className={cn("mt-1 font-bold", pump.status === "on" ? "text-status-ok" : "text-muted-foreground")}>{pump.status === "on" ? "Operando" : "Parada"}</p>
+          <p className={cn("mt-1 font-bold", pump.status === "on" ? "text-status-ok" : "text-muted-foreground")}>{(pump as any).statusLabel || "--"}</p>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Horas ligada</p>
-          <p className="mt-1 font-mono text-base font-bold">{fmt(pumpHours(pump, index), 1)} h</p>
+          <p className="mt-1 font-mono text-base font-bold">{(pump as any).horasLigadaLabel || "--"}</p>
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Partidas est.</p>
-          <p className="mt-1 font-mono text-base font-bold">{pumpStarts(pump, index)}</p>
+          <p className="mt-1 font-mono text-base font-bold">{(pump as any).partidasLabel || "--"}</p>
         </div>
       </div>
 
@@ -332,7 +295,8 @@ function PumpsPage() {
             >
               {periodOptions.map((option) => (
                 <option key={option.key} value={option.key}>{option.label} · {option.date}</option>
-              ))}
+                );
+            })}
             </select>
             <ChevronDown className="h-4 w-4 text-muted-foreground" />
           </div>
@@ -395,19 +359,23 @@ function PumpsPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-5">
-            {[
-              { label: "Pressão média", value: `${fmt(active.hydraulic.pressureLine, 2)} bar`, detail: active.hydraulic.pressureError < 0 ? `${fmt(active.hydraulic.pressureError, 2)} bar` : "Dentro da faixa", alert: active.hydraulic.pressureError < -0.3 },
-              { label: "Setpoint", value: `${fmt(active.hydraulic.pressureSetpoint, 2)} bar`, detail: "Pressão alvo", alert: false },
-              { label: "Desvio", value: `${fmt(active.hydraulic.pressureError, 2)} bar`, detail: active.hydraulic.pressureError < -0.3 ? "Abaixo do setpoint" : "Estável", alert: active.hydraulic.pressureError < -0.3 },
-              { label: "Válvula bypass", value: `${active.hydraulic.bypassValve}%`, detail: active.hydraulic.bypassValve > 50 ? "Abertura elevada" : "Normal", alert: active.hydraulic.bypassValve > 50 },
-              { label: "Bombas operando", value: `${status.pumpsOn} / 4`, detail: status.pumpsOn >= 3 ? "Em operação" : "Atenção", alert: status.pumpsOn < 3 },
-            ].map((metric) => (
-              <div key={metric.label} className="rounded-2xl border border-border/45 bg-background/35 p-4">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{metric.label}</p>
-                <p className={cn("mt-3 font-display text-2xl font-bold", metric.alert && "text-status-alert")}>{metric.value}</p>
-                <p className={cn("mt-2 text-xs", metric.alert ? "text-status-warn" : "text-muted-foreground")}>{metric.detail}</p>
-              </div>
-            ))}
+            {([
+              { id: "pressao_linha", fallbackLabel: "Pressão média" },
+              { id: "setpoint", fallbackLabel: "Setpoint" },
+              { id: "bypass", fallbackLabel: "Válvula bypass" },
+              { id: "bombas_ligadas", fallbackLabel: "Bombas operando" },
+              { id: "status_geral", fallbackLabel: "Status geral" },
+            ] as const).map((def) => {
+              const card = ((active as any).pumpUi?.cards || []).find((c: any) => c.id === def.id) || {};
+              const metric = { label: card.label || def.fallbackLabel, value: card.value ?? "--", detail: card.detail || "", alert: String(card.status || "").toLowerCase().includes("aten") || String(card.status || "").toLowerCase().includes("crit") };
+              return (
+                <div key={metric.label} className="rounded-2xl border border-border/45 bg-background/35 p-4">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{metric.label}</p>
+                  <p className={cn("mt-3 font-display text-2xl font-bold", metric.alert && "text-status-alert")}>{metric.value}</p>
+                  <p className={cn("mt-2 text-xs", metric.alert ? "text-status-warn" : "text-muted-foreground")}>{metric.detail}</p>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

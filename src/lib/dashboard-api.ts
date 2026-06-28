@@ -103,6 +103,21 @@ export function textInt(v: any, suffix = ""): string {
   return `${Math.round(n).toLocaleString("pt-BR")}${suffix}`;
 }
 
+
+export function cardById(list: any, id: string) {
+  return Array.isArray(list) ? list.find((c: any) => c?.id === id) || null : null;
+}
+
+export function cardValue(list: any, id: string, fallback = dash) {
+  const c = cardById(list, id);
+  return field(c?.value, fallback);
+}
+
+export function cardRaw(list: any, id: string) {
+  const c = cardById(list, id);
+  return c?.raw_value ?? null;
+}
+
 export function statusTone(status: any): "ok" | "warn" | "crit" | "info" | "ai" {
   const s = String(status || "").toLowerCase();
   if (s.includes("crit") || s.includes("alert")) return "crit";
@@ -148,43 +163,59 @@ export function toLegacyChiller(c: any, b?: any) {
   const circA = c?.circuitos?.A || {};
   const circB = c?.circuitos?.B || {};
   const pumps = Array.isArray(b?.bombas) ? b.bombas : [];
-  const makeCircuit = (src: any, id: "A" | "B") => ({
-    id,
-    capacity: asNum(src?.capacidade_avg) ?? 0,
-    highPressure: asNum(src?.pressao_descarga_avg) ?? 0,
-    lowPressure: asNum(src?.pressao_succao_avg) ?? 0,
-    oilPressureC1: asNum(src?.pressao_oleo_cp1_avg) ?? 0,
-    oilPressureC2: asNum(src?.pressao_oleo_cp2_avg) ?? 0,
-    compressor1Status: stateToStatus(src?.compressor_1_atual),
-    compressor2Status: stateToStatus(src?.compressor_2_atual),
-    healthScore: c?.status === "normal" ? 90 : 72,
-    anomalies: Array.isArray(c?.issues) ? c.issues.length : 0,
-  });
+  const pumpUiCards = b?.ui?.cards || b?.cards || [];
+  const uiCards = c?.ui?.cards || c?.cards || [];
+  const getRaw = (id: string, fallback: any = null) => cardRaw(uiCards, id) ?? fallback;
+  const getValue = (id: string, fallback = dash) => cardValue(uiCards, id, fallback);
+  const makeCircuit = (src: any, id: "A" | "B") => {
+    const circuitUi = Array.isArray(c?.ui?.circuitos) ? c.ui.circuitos.find((x: any) => x?.id === id) : null;
+    const circuitCards = circuitUi?.cards || [];
+    return {
+      id,
+      capacity: cardRaw(circuitCards, "capacidade") ?? asNum(src?.capacidade_avg),
+      capacityLabel: cardValue(circuitCards, "capacidade"),
+      highPressure: cardRaw(circuitCards, "descarga") ?? asNum(src?.pressao_descarga_avg),
+      highPressureLabel: cardValue(circuitCards, "descarga"),
+      lowPressure: cardRaw(circuitCards, "succao") ?? asNum(src?.pressao_succao_avg),
+      lowPressureLabel: cardValue(circuitCards, "succao"),
+      oilPressureC1: asNum(src?.pressao_oleo_cp1_avg),
+      oilPressureC2: asNum(src?.pressao_oleo_cp2_avg),
+      oilLabel: cardValue(circuitCards, "oleo"),
+      compressor1Status: stateToStatus(src?.compressor_1_atual),
+      compressor2Status: stateToStatus(src?.compressor_2_atual),
+      healthScore: c?.status === "normal" ? 90 : 72,
+      anomalies: Array.isArray(c?.issues) ? c.issues.length : 0,
+    };
+  };
   return {
     id: ui,
     name: c?.name || `Chiller ${groupName[ui]}`,
     status: c?.status === "normal" ? "running" : "fault",
     command: "auto",
     healthScore: c?.status === "normal" ? 92 : 74,
-    capacityTotal: asNum(c?.capacidade?.avg) ?? 0,
-    capacityA: asNum(c?.capacidade?.circuito_a_avg) ?? 0,
-    capacityB: asNum(c?.capacidade?.circuito_b_avg) ?? 0,
-    setpoint: asNum(c?.setpoint?.avg) ?? 0,
-    feedTemp: asNum(c?.temperaturas?.saida_avg) ?? 0,
-    returnTemp: asNum(c?.temperaturas?.retorno_avg) ?? 0,
-    deltaT: asNum(c?.delta_t?.avg) ?? 0,
-    externalTemp: asNum(c?.temperaturas?.externa_avg) ?? 0,
-    demandLimit: asNum(c?.limite_demanda_avg) ?? 0,
-    operatingHours: (asNum(c?.tempo_ligado_horas) ?? 0) * 1000,
-    starts: asNum(c?.numero_partidas_final ?? c?.partidas_estimadas) ?? 0,
-    alarms: asNum(c?.alarmes?.ocorrencias_amostras) ?? 0,
+    capacityTotal: getRaw("capacidade_media", asNum(c?.capacidade?.avg)),
+    capacityTotalLabel: getValue("capacidade_media"),
+    capacityA: asNum(c?.capacidade?.circuito_a_avg),
+    capacityB: asNum(c?.capacidade?.circuito_b_avg),
+    setpoint: asNum(c?.setpoint?.avg),
+    feedTemp: asNum(c?.temperaturas?.saida_avg),
+    returnTemp: asNum(c?.temperaturas?.retorno_avg),
+    deltaT: getRaw("delta_t_medio", asNum(c?.delta_t?.avg)),
+    deltaTLabel: getValue("delta_t_medio"),
+    externalTemp: asNum(c?.temperaturas?.externa_avg),
+    demandLimit: asNum(c?.limite_demanda_avg),
+    operatingHours: asNum(c?.tempo_ligado_horas),
+    operatingHoursLabel: getValue("horas_operacao"),
+    starts: asNum(c?.numero_partidas_final ?? c?.partidas_estimadas),
+    alarms: asNum(c?.alarmes?.ocorrencias_amostras),
     activeAlarms: Array.isArray(c?.issues) ? c.issues.map((i: any) => i.title).filter(Boolean) : [],
     risk: statusTone(c?.status) === "ok" ? "ok" : "warn",
-    pumpsOn: asNum(b?.resumo_operacional?.bombas_ligadas_avg) ?? 0,
+    pumpsOn: asNum(b?.resumo_operacional?.bombas_ligadas_avg),
     aiInsight: c?.principal_ocorrencia || "Sem ocorrências relevantes",
-    setpointAtingido: c?.setpoint_atingido ?? c?.ui?.setpoint_atingido ?? null,
-    eventos_recentes: c?.eventos_recentes || [],
-    acoes_recomendadas: c?.acoes_recomendadas || [],
+    setpointAtingido: getRaw("setpoint_atingido", c?.setpoint?.atingido_pct),
+    setpointAtingidoLabel: getValue("setpoint_atingido"),
+    eventos_recentes: c?.ui?.eventos_recentes || c?.eventos_recentes || [],
+    acoes_recomendadas: c?.ui?.acoes_recomendadas || c?.acoes_recomendadas || [],
     circuits: [makeCircuit(circA, "A"), makeCircuit(circB, "B")],
     compressors: [],
     pumps: [1, 2, 3, 4].map((id) => {
@@ -193,28 +224,43 @@ export function toLegacyChiller(c: any, b?: any) {
         id: `BAG${id}`,
         name: `BAG${id}`,
         status: stateToStatus(p.estado_atual),
-        mode: String(p.modo_atual || "Remoto").toLowerCase().includes("local") ? "local" : "remote",
-        pressureLine: asNum(b?.pressao?.linha_avg) ?? 0,
-        pressureSetpoint: asNum(b?.pressao?.setpoint_avg) ?? 0,
-        pressureError: asNum(b?.pressao?.erro_avg) ?? 0,
-        bypassValve: asNum(b?.bypass?.avg) ?? 0,
+        statusLabel: p.estado_atual || "--",
+        mode: String(p.modo_atual || "").toLowerCase().includes("local") ? "local" : "remote",
+        modeLabel: p.modo_atual || "--",
+        pressureLine: asNum(b?.pressao?.linha_avg),
+        pressureSetpoint: asNum(b?.pressao?.setpoint_avg),
+        pressureError: asNum(b?.pressao?.erro_avg),
+        bypassValve: asNum(b?.bypass?.avg),
         alarm: p.tem_alarme_atual === true,
         healthScore: p.status === "normal" ? 90 : 72,
-        lastEvent: p.principal_ocorrencia || "Sem ocorrências relevantes",
+        horasLigada: asNum(p.horas_ligada),
+        horasLigadaLabel: text(p.horas_ligada, " h", 1),
+        partidas: asNum(p.partidas_estimadas),
+        partidasLabel: textInt(p.partidas_estimadas),
+        lastEvent: p.principal_ocorrencia || "--",
       };
     }),
     hydraulic: {
-      pressureLine: asNum(b?.pressao?.linha_avg) ?? 0,
-      pressureSetpoint: asNum(b?.pressao?.setpoint_avg) ?? 0,
-      pressureError: asNum(b?.pressao?.erro_avg) ?? 0,
-      bypassValve: asNum(b?.bypass?.avg) ?? 0,
+      pressureLine: asNum(b?.pressao?.linha_avg),
+      pressureSetpoint: asNum(b?.pressao?.setpoint_avg),
+      pressureError: asNum(b?.pressao?.erro_avg),
+      bypassValve: asNum(b?.bypass?.avg),
+    },
+    pumpUi: {
+      title: b?.ui?.title || b?.name || `Bombas ${groupName[ui]}`,
+      subtitle: b?.ui?.subtitle || b?.principal_ocorrencia || "--",
+      status: b?.ui?.status || b?.status || "normal",
+      statusLabel: b?.ui?.status_label || b?.status_label || "--",
+      cards: pumpUiCards,
+      eventos: b?.ui?.eventos_recentes || b?.eventos_recentes || [],
+      acoes: b?.ui?.acoes_recomendadas || b?.acoes_recomendadas || [],
     },
     series: {
-      feedReturnSetpoint: (c?.trends?.agua_gelada || []).map((p: any) => ({ t: p.x || p.date || "", feed: asNum(p.saida) ?? 0, ret: asNum(p.entrada) ?? 0, set: asNum(p.setpoint) ?? 0 })),
-      deltaT: (c?.trends?.agua_gelada || []).map((p: any) => ({ t: p.x || p.date || "", v: asNum(p.delta_t) ?? 0 })),
-      capacity: (c?.trends?.capacidade || []).map((p: any) => ({ t: p.x || p.date || "", total: asNum(p.total) ?? 0, a: asNum(p.circuito_a) ?? 0, b: asNum(p.circuito_b) ?? 0 })),
-      pressureHigh: (c?.trends?.pressoes || []).map((p: any) => ({ t: p.x || p.date || "", a: asNum(p.descarga_a) ?? 0, b: asNum(p.descarga_b) ?? 0 })),
-      pressureLow: (c?.trends?.pressoes || []).map((p: any) => ({ t: p.x || p.date || "", a: asNum(p.succao_a) ?? 0, b: asNum(p.succao_b) ?? 0 })),
+      feedReturnSetpoint: (c?.trends?.agua_gelada || []).map((p: any) => ({ t: p.x || p.date || "", feed: asNum(p.saida), ret: asNum(p.entrada), set: asNum(p.setpoint) })),
+      deltaT: (c?.trends?.agua_gelada || []).map((p: any) => ({ t: p.x || p.date || "", v: asNum(p.delta_t) })),
+      capacity: (c?.trends?.capacidade || []).map((p: any) => ({ t: p.x || p.date || "", total: asNum(p.total), a: asNum(p.circuito_a), b: asNum(p.circuito_b) })),
+      pressureHigh: (c?.trends?.pressoes || []).map((p: any) => ({ t: p.x || p.date || "", a: asNum(p.descarga_a), b: asNum(p.descarga_b) })),
+      pressureLow: (c?.trends?.pressoes || []).map((p: any) => ({ t: p.x || p.date || "", a: asNum(p.succao_a), b: asNum(p.succao_b) })),
       externalVsCap: [],
       compressorStarts: [],
     },
@@ -288,7 +334,7 @@ export function homePageData(payload: ApiPayload, period: UiPeriod, icons: any) 
         status: (c.status_label || full.status_label || c.status || full.status || "--").toString().toLowerCase().includes("normal") ? "Normal" : "Atenção",
         hours: text(full.tempo_ligado_horas, " h", 1),
         deltaT: text(c.delta_t ?? full.delta_t?.avg, "°C", 1),
-        setpoint: textInt(full.setpoint_atingido ?? full.ui?.setpoint_atingido, "%"),
+        setpoint: cardValue(full?.ui?.cards || full?.cards, "setpoint_atingido", textInt(full?.setpoint?.atingido_pct, "%")),
         compare: "",
         note: c.principal_ocorrencia || full.principal_ocorrencia || "Sem ocorrências relevantes",
         tone: toneFromStatus(c.status || full.status),

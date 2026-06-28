@@ -74,10 +74,6 @@ function fmt(value: number, digits = 1) {
   return value.toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
 }
 
-function psi(value: number) {
-  return Math.round(value * 50);
-}
-
 function chillerStatus(chiller: ChillerData) {
   if (chiller.risk === "ok") return { label: "Normal", tone: "ok" as const, occurrence: "Sem ocorrências relevantes" };
   if (chiller.risk === "info") return { label: "Normal", tone: "info" as const, occurrence: "Operação estável em acompanhamento" };
@@ -85,17 +81,19 @@ function chillerStatus(chiller: ChillerData) {
 }
 
 function circuitSummary(chiller: ChillerData, circuitId: "A" | "B") {
-  const circuit = chiller.circuits.find((c) => c.id === circuitId) || chiller.circuits[0];
+  const circuit: any = chiller.circuits.find((c) => c.id === circuitId) || chiller.circuits[0] || {};
   const hasAttention = chiller.risk !== "ok" && circuitId === "B" && chiller.id === "red";
+  const capacityValue = circuit.capacity ?? (circuitId === "A" ? chiller.capacityA : chiller.capacityB);
   return {
     title: `Circuito ${circuitId}`,
-    capacity: circuitId === "A" ? chiller.capacityA : chiller.capacityB,
-    suction: psi(circuit.lowPressure),
-    discharge: psi(circuit.highPressure),
-    oil: hasAttention ? "Atenção" : "Normal",
-    fans: "4/4",
-    compressor1: circuit.compressor1Status === "on" ? "Operando" : "Standby",
-    compressor2: hasAttention ? "Atenção" : circuit.compressor2Status === "on" ? "Operando" : "Standby",
+    capacity: capacityValue ?? 0,
+    capacityLabel: circuit.capacityLabel || textInt(capacityValue, "%"),
+    suction: circuit.lowPressureLabel || textInt(circuit.lowPressure, " psi"),
+    discharge: circuit.highPressureLabel || textInt(circuit.highPressure, " psi"),
+    oil: circuit.oilLabel || "--",
+    fans: "--",
+    compressor1: circuit.compressor1Status === "on" ? "Operando" : circuit.compressor1Status === "off" ? "Standby" : "--",
+    compressor2: circuit.compressor2Status === "on" ? "Operando" : circuit.compressor2Status === "off" ? "Standby" : "--",
     hasAttention,
   };
 }
@@ -298,8 +296,8 @@ function ChillersPage() {
                 </div>
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                <Metric label="Horas de operação" value={text(active.operatingHours / 1000, " h", 1)} />
-                <Metric label="Última atualização" value="19/06/2026 06:55" />
+                <Metric label="Horas de operação" value={(active as any).operatingHoursLabel || text((active as any).operatingHours, " h", 1)} />
+                <Metric label="Última atualização" value="--" />
               </div>
             </div>
           </div>
@@ -311,18 +309,18 @@ function ChillersPage() {
               <Metric label="Entrada média" value={text(active.returnTemp, " °C", 1)} />
               <Metric label="Delta T médio" value={text(active.deltaT, " °C", 1)} valueClassName={status.tone === "ok" ? "text-status-ok" : "text-status-crit"} />
               <Metric label="Setpoint" value={text(active.setpoint, " °C", 1)} />
-              <Metric label="Setpoint atingido" value={textInt((active as any).setpointAtingido, "%")} />
+              <Metric label="Setpoint atingido" value={(active as any).setpointAtingidoLabel || textInt((active as any).setpointAtingido, "%")} />
             </div>
           </div>
 
           <div className="py-5 xl:pl-5 xl:py-0">
             <SectionTitle>Resumo de Capacidade</SectionTitle>
             <div className="mt-5 flex items-center gap-6">
-              <CapacityRing value={active.capacityTotal} color={active.id} />
+              <CapacityRing value={(active as any).capacityTotal} valueLabel={(active as any).capacityTotalLabel} color={active.id} />
               <div className="flex-1 space-y-4 text-sm">
                 <CapacityLine label="Circuito A" value={active.capacityA} />
                 <CapacityLine label="Circuito B" value={active.capacityB} />
-                <CapacityLine label="Capacidade instalada" value={100} />
+                <CapacityLine label="Capacidade instalada" value={null as any} />
               </div>
             </div>
           </div>
@@ -495,13 +493,14 @@ function Metric({ label, value, valueClassName }: { label: string; value: string
   );
 }
 
-function CapacityRing({ value, color }: { value: number; color: ChillerId }) {
+function CapacityRing({ value, valueLabel, color }: { value: number | null; valueLabel?: string; color: ChillerId }) {
   const ringColor = color === "red" ? "#fb7185" : color === "white" ? "#e2e8f0" : "#38bdf8";
+  const numericValue = typeof value === "number" && Number.isFinite(value) ? value : 0;
   return (
-    <div className="relative grid h-28 w-28 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(${ringColor} ${value * 3.6}deg, rgba(148,163,184,0.16) 0deg)` }}>
+    <div className="relative grid h-28 w-28 shrink-0 place-items-center rounded-full" style={{ background: `conic-gradient(${ringColor} ${numericValue * 3.6}deg, rgba(148,163,184,0.16) 0deg)` }}>
       <div className="grid h-[78px] w-[78px] place-items-center rounded-full bg-background/95 shadow-[inset_0_0_18px_rgba(255,255,255,0.04)]">
         <div className="text-center">
-          <div className="font-display text-2xl font-bold" style={{ color: ringColor }}>{value}%</div>
+          <div className="font-display text-2xl font-bold" style={{ color: ringColor }}>{valueLabel || textInt(value, "%")}</div>
           <div className="text-[10px] text-muted-foreground">Capacidade média</div>
         </div>
       </div>
@@ -509,15 +508,15 @@ function CapacityRing({ value, color }: { value: number; color: ChillerId }) {
   );
 }
 
-function CapacityLine({ label, value }: { label: string; value: number }) {
+function CapacityLine({ label, value }: { label: string; value: number | null }) {
   return (
     <div>
       <div className="flex items-center justify-between text-xs">
         <span className="text-muted-foreground">{label}</span>
-        <span className="font-semibold text-foreground">{value}%</span>
+        <span className="font-semibold text-foreground">{textInt(value, "%")}</span>
       </div>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-        <div className="h-full rounded-full bg-primary" style={{ width: `${value}%` }} />
+        <div className="h-full rounded-full bg-primary" style={{ width: `${typeof value === "number" && Number.isFinite(value) ? value : 0}%` }} />
       </div>
     </div>
   );
@@ -534,13 +533,13 @@ function CircuitCard({ chiller, circuitId }: { chiller: ChillerData; circuitId: 
       <div className="grid gap-3 md:grid-cols-5">
         <div className="md:col-span-1">
           <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Capacidade média</div>
-          <div className="mt-1 font-display text-2xl font-bold">{circuit.capacity}%</div>
+          <div className="mt-1 font-display text-2xl font-bold">{circuit.capacityLabel}</div>
           <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
-            <div className={cn("h-full rounded-full", circuit.hasAttention ? "bg-status-warn" : "bg-primary")} style={{ width: `${circuit.capacity}%` }} />
+            <div className={cn("h-full rounded-full", circuit.hasAttention ? "bg-status-warn" : "bg-primary")} style={{ width: `${typeof circuit.capacity === "number" && Number.isFinite(circuit.capacity) ? circuit.capacity : 0}%` }} />
           </div>
         </div>
-        <CircuitMetric label="Sucção média" value={`${circuit.suction} psi`} />
-        <CircuitMetric label="Descarga média" value={`${circuit.discharge} psi`} />
+        <CircuitMetric label="Sucção média" value={circuit.suction} />
+        <CircuitMetric label="Descarga média" value={circuit.discharge} />
         <CircuitMetric label="Óleo CP1/CP2" value={circuit.oil} tone={circuit.hasAttention ? "warn" : "ok"} />
         <CircuitMetric label="Ventiladores" value={circuit.fans} />
       </div>
