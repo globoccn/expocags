@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { healthFactors } from "@/data/mockCagData";
+import { healthFactors } from "@/data/cagTypes";
 
 function classify(score: number) {
   if (score >= 90) return { label: "Excelente", color: "var(--status-ok)" };

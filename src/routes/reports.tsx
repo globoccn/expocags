@@ -183,7 +183,7 @@ function ReportsPage() {
 
       const base64 = data?.pdf?.base64;
       if (!base64) {
-        throw new Error("O workflow respondeu sem o PDF em base64.");
+        throw new Error("Não foi possível gerar o PDF solicitado.");
       }
 
       const filename = data?.pdf?.filename || "demonstrativo-agua.pdf";

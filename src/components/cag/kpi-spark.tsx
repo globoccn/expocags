@@ -1,7 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { KpiSpark } from "@/data/mockCagData";
+import type { KpiSpark } from "@/data/cagTypes";
 import { Sparkline } from "./sparkline";
 
 const toneText: Record<string, string> = {

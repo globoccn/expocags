@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { ChillerId } from "@/data/mockCagData";
+import type { ChillerId } from "@/data/cagTypes";
 
 const palette: Record<ChillerId, { main: string; glow: string; accent: string }> = {
   blue: { main: "oklch(0.78 0.22 230)", glow: "oklch(0.85 0.22 220)", accent: "oklch(0.9 0.18 200)" },

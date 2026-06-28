@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { useDashboard } from "@/lib/dashboard-api";
 import { cn } from "@/lib/utils";
 import centerNorteLogo from "@/assets/center-norte-logo.jpg";
 
@@ -27,11 +28,8 @@ const nav = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { uiPeriod: period, setUiPeriod, data } = useDashboard();
   const [now, setNow] = useState("");
-  const [period, setPeriod] = useState(() => {
-    if (typeof window === "undefined") return "d1";
-    return window.localStorage.getItem("cag-period") || "d1";
-  });
 
   useEffect(() => {
     const tick = () => {
@@ -127,9 +125,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                   key={p.value}
                   type="button"
                   onClick={() => {
-                    setPeriod(p.value);
-                    window.localStorage.setItem("cag-period", p.value);
-                    window.dispatchEvent(new CustomEvent("cag-period-change", { detail: p.value }));
+                    setUiPeriod(p.value as any);
                   }}
                   className={cn(
                     "min-w-16 rounded-full px-3 py-1.5 font-semibold transition-all",
@@ -145,12 +141,12 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="hidden items-center gap-3 rounded-full border border-border/60 bg-surface-2/55 px-3 py-1.5 text-[10px] text-muted-foreground shadow-[inset_0_0_16px_rgba(255,255,255,0.03)] xl:flex">
               <div className="flex items-center gap-1.5">
                 <span className="uppercase tracking-[0.16em] opacity-70">Dados da base</span>
-                <span className="font-mono font-semibold text-foreground/85">19/06/2026 (D-1)</span>
+                <span className="font-mono font-semibold text-foreground/85">{data?.end_date || data?.date || "--"}</span>
               </div>
               <span className="h-4 w-px bg-border/70" />
               <div className="flex items-center gap-1.5">
                 <span className="uppercase tracking-[0.16em] opacity-70">Atualizado</span>
-                <span className="font-mono font-semibold text-foreground/85">20/06/2026 06:05</span>
+                <span className="font-mono font-semibold text-foreground/85">{data?.generated_at ? new Date(data.generated_at).toLocaleString("pt-BR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" }) : "--"}</span>
               </div>
             </div>
             <div className="hidden font-mono text-xs text-muted-foreground md:block">{now}</div>

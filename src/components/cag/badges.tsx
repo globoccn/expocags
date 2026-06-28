@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { Severity } from "@/data/mockCagData";
+import type { Severity } from "@/data/cagTypes";
 
 const sevMap: Record<Severity, { label: string; cls: string }> = {
   ok: { label: "Normal", cls: "bg-status-ok/15 text-status-ok border-status-ok/40" },
