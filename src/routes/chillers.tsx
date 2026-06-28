@@ -23,7 +23,6 @@ import chillerBlue from "@/assets/chiller-blue.png";
 import chillerRed from "@/assets/chiller-red.png";
 import chillerWhite from "@/assets/chiller-white.png";
 import {
-  chillers as chillerTemplates,
   type ChillerData,
   type ChillerId,
 } from "@/data/mockCagData";
@@ -258,7 +257,7 @@ function trendYAxisConfig(context: TrendContext) {
 function ChillersPage() {
   const { period: globalPeriod, data: apiPayload, loading, error } = useDashboardPeriod();
   const chillers = useMemo(
-    () => (apiPayload ? mergeChillersFromDashboard(apiPayload, chillerTemplates) : []),
+    () => (apiPayload ? mergeChillersFromDashboard(apiPayload, []) : []),
     [apiPayload],
   );
   const [activeId, setActiveId] = useState<ChillerId>("blue");
