@@ -10,7 +10,7 @@ import {
   Settings,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDashboardPeriod } from "@/lib/dashboard-api";
 import { cn } from "@/lib/utils";
 import centerNorteLogo from "@/assets/center-norte-logo.jpg";
