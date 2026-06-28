@@ -102,7 +102,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
           })}
         </nav>
         <div className="border-t border-border/40 px-3 py-3 text-[10px] text-muted-foreground">
-          <div className="text-[9px] uppercase tracking-[0.18em] opacity-60">v8.21 · API v2.3</div>
+          <div className="text-[9px] uppercase tracking-[0.18em] opacity-60">v8.21.1 · API v2.3</div>
         </div>
       </aside>
 

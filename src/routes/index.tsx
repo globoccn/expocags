@@ -36,7 +36,7 @@ function Index() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4 xl:col-span-2">
+        <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)] xl:col-span-2">
           <div className="mb-4 flex items-center gap-2">
             <CircuitBoard className="h-5 w-5 text-primary" />
             <h2 className="font-display text-lg font-semibold">Chillers por grupo</h2>
@@ -59,7 +59,7 @@ function Index() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+        <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
           <div className="mb-4 flex items-center gap-2">
             <Droplets className="h-5 w-5 text-primary" />
             <h2 className="font-display text-lg font-semibold">Bombas</h2>
@@ -82,7 +82,7 @@ function Index() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+        <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
           <div className="mb-4 flex items-center gap-2"><AlertTriangle className="h-5 w-5 text-amber-300" /><h2 className="font-display text-lg font-semibold">Ocorrências do período</h2></div>
           <div className="space-y-3">
             {issues.slice(0, 6).map((issue: any, idx: number) => (
@@ -96,7 +96,7 @@ function Index() {
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+        <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
           <div className="mb-4 flex items-center gap-2"><Bot className="h-5 w-5 text-primary" /><h2 className="font-display text-lg font-semibold">Ações recomendadas</h2></div>
           <div className="space-y-3">
             {recs.length ? recs.map((rec: any, idx: number) => (
@@ -109,7 +109,7 @@ function Index() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4 text-xs text-muted-foreground">
+      <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)] text-xs text-muted-foreground">
         <Database className="mr-2 inline h-4 w-4" /> Fonte: {text(payload._api?.redis_key)} · Schema {text(payload.schema_version || payload.type)}
       </div>
     </div>

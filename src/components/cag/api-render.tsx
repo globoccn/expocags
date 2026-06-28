@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import {
   CartesianGrid,
@@ -11,12 +12,14 @@ import {
   BarChart,
 } from "recharts";
 import { asArray, fmt, statusClass, text } from "@/lib/dashboard-context";
+import { cn } from "@/lib/utils";
 
 export function PageState({ loading, error }: { loading: boolean; error: string | null }) {
   if (loading) {
     return (
-      <div className="grid min-h-[55vh] place-items-center rounded-2xl border border-border/50 bg-surface-2/40">
-        <div className="flex items-center gap-3 text-sm text-muted-foreground">
+      <div className="relative grid min-h-[55vh] place-items-center overflow-hidden rounded-[28px] border border-primary/20 bg-[radial-gradient(circle_at_50%_0%,rgba(0,180,255,0.16),transparent_42%),rgba(15,23,42,0.42)] shadow-[inset_0_0_60px_rgba(255,255,255,0.04)]">
+        <div className="absolute inset-x-12 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+        <div className="flex items-center gap-3 rounded-full border border-border/50 bg-background/45 px-5 py-3 text-sm text-muted-foreground backdrop-blur-xl">
           <Loader2 className="h-5 w-5 animate-spin text-primary" />
           Carregando dados reais da API Dashboard...
         </div>
@@ -25,7 +28,7 @@ export function PageState({ loading, error }: { loading: boolean; error: string 
   }
   if (error) {
     return (
-      <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-6 text-red-100">
+      <div className="rounded-[26px] border border-red-500/30 bg-red-500/10 p-6 text-red-100 shadow-[0_0_30px_rgba(239,68,68,0.08)]">
         <div className="flex items-center gap-2 font-semibold"><AlertTriangle className="h-5 w-5" /> Falha ao carregar API</div>
         <p className="mt-2 text-sm text-red-100/80">{error}</p>
       </div>
@@ -36,32 +39,50 @@ export function PageState({ loading, error }: { loading: boolean; error: string 
 
 export function SectionTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
-    <div>
-      <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">{title}</h1>
-      {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+    <div className="relative overflow-hidden rounded-[28px] border border-border/50 bg-[radial-gradient(circle_at_12%_0%,rgba(0,180,255,0.16),transparent_36%),linear-gradient(135deg,rgba(15,23,42,0.72),rgba(2,6,23,0.35))] p-5 shadow-[inset_0_0_40px_rgba(255,255,255,0.035)]">
+      <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary/70 to-transparent" />
+      <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-primary/80">Centro de Inteligência CAG</div>
+      <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-foreground md:text-3xl">{title}</h1>
+      {subtitle && <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{subtitle}</p>}
     </div>
   );
 }
 
-export function MetricCard({ label, value, detail, status }: { label: string; value: any; detail?: string; status?: any }) {
+export function MetricCard({ label, value, detail, status, className }: { label: string; value: any; detail?: string; status?: any; className?: string }) {
   return (
-    <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_26px_rgba(255,255,255,0.03)]">
-      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
-      <div className="mt-3 text-2xl font-bold text-foreground">{text(value)}</div>
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <span className="text-xs text-muted-foreground">{detail || "Dados do workflow"}</span>
-        {status && <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusClass(status)}`}>{text(status)}</span>}
+    <div className={cn("group relative overflow-hidden rounded-[22px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_26px_rgba(255,255,255,0.03)] transition hover:border-primary/35 hover:shadow-[0_0_30px_rgba(0,180,255,0.10),inset_0_0_26px_rgba(255,255,255,0.04)]", className)}>
+      <div className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary/10 blur-2xl transition group-hover:bg-primary/15" />
+      <div className="relative text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
+      <div className="relative mt-3 font-mono text-2xl font-bold text-foreground">{text(value)}</div>
+      <div className="relative mt-3 flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-xs text-muted-foreground">{detail || "Dados do workflow"}</span>
+        {status && <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${statusClass(status)}`}>{text(status)}</span>}
       </div>
     </div>
   );
 }
 
 export function EmptyData({ label = "Sem dados para este período" }: { label?: string }) {
-  return <div className="rounded-2xl border border-dashed border-border/60 bg-surface-2/25 p-6 text-sm text-muted-foreground">{label}</div>;
+  return <div className="rounded-[22px] border border-dashed border-border/60 bg-surface-2/25 p-6 text-sm text-muted-foreground">{label}</div>;
 }
 
 export function StatusPill({ status }: { status: any }) {
   return <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${statusClass(status)}`}>{text(status)}</span>;
+}
+
+export function DataPanel({ title, icon, children, actions, className }: { title?: string; icon?: ReactNode; children: ReactNode; actions?: ReactNode; className?: string }) {
+  return (
+    <section className={cn("relative overflow-hidden rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]", className)}>
+      <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-primary/35 to-transparent" />
+      {(title || actions) && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          {title && <div className="flex items-center gap-2 font-display text-lg font-semibold">{icon}<span>{title}</span></div>}
+          {actions}
+        </div>
+      )}
+      {children}
+    </section>
+  );
 }
 
 export function SimpleLineChart({ data, keys, height = 260 }: { data: any[]; keys: Array<{ key: string; label: string }>; height?: number }) {

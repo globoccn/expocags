@@ -32,7 +32,7 @@ function ChillerDetailPage() {
         {["A", "B"].map((key) => {
           const c = chiller.circuitos?.[key] || {};
           return (
-            <div key={key} className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+            <div key={key} className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
               <div className="mb-4 flex items-center justify-between"><h2 className="font-display text-lg font-semibold">Circuito {key}</h2><StatusPill status={c.pressao_oleo_status} /></div>
               <div className="grid gap-3 md:grid-cols-3">
                 <MetricCard label="Capacidade" value={fmtMetric(c.capacidade_avg, "%")} />

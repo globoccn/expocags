@@ -33,7 +33,7 @@ function AiPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+        <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
           <div className="mb-4 flex items-center gap-2"><Bot className="h-5 w-5 text-primary" /><h2 className="font-display text-lg font-semibold">Diagnósticos</h2></div>
           <div className="space-y-4">
             {diagnosticos.map((diag: any, idx: number) => (
@@ -58,15 +58,15 @@ function AiPage() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+          <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
             <div className="mb-4 flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /><h2 className="font-display text-lg font-semibold">Recomendações prioritárias</h2></div>
             <ListBlock items={recomendacoes} />
           </div>
-          <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+          <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
             <h2 className="font-display text-lg font-semibold">Ocorrências principais</h2>
             <ListBlock items={ocorrencias} />
           </div>
-          <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+          <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
             <h2 className="font-display text-lg font-semibold">Equipamentos em atenção</h2>
             <ListBlock items={equipamentos} />
           </div>

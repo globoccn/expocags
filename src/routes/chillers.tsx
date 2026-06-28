@@ -65,7 +65,7 @@ function ChillersPage() {
               type="button"
               onClick={() => setActiveId(id)}
               className={cn(
-                "overflow-hidden rounded-2xl border bg-surface-2/55 p-4 text-left transition",
+                "overflow-hidden rounded-[26px] border bg-surface-2/55 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)] p-4 text-left transition",
                 active?.id === id ? "border-primary/55 shadow-[0_0_30px_rgba(0,180,255,0.16)]" : "border-border/50 hover:border-primary/35",
               )}
             >
@@ -98,7 +98,7 @@ function ChillersPage() {
           </div>
 
           <div className="grid gap-4 xl:grid-cols-[1fr_1.15fr]">
-            <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+            <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
               <div className="mb-4 flex items-center gap-2"><Thermometer className="h-5 w-5 text-primary" /><h2 className="font-display text-lg font-semibold">Resumo Água Gelada</h2></div>
               <div className="grid gap-3 md:grid-cols-2">
                 <MetricCard label="Entrada média" value={fmtMetric(active.temperaturas?.retorno_avg, " °C")} detail="temp_retorno_ag" />
@@ -108,7 +108,7 @@ function ChillersPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+            <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2"><CircuitBoard className="h-5 w-5 text-primary" /><h2 className="font-display text-lg font-semibold">Tendências</h2></div>
                 <div className="flex rounded-full border border-border/60 bg-background/35 p-0.5 text-xs">
@@ -129,7 +129,7 @@ function ChillersPage() {
             {["A", "B"].map((circuit) => {
               const c = active.circuitos?.[circuit] || {};
               return (
-                <div key={circuit} className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+                <div key={circuit} className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
                   <div className="mb-4 flex items-center justify-between"><h2 className="font-display text-lg font-semibold">Circuito {circuit}</h2><StatusPill status={c.pressao_oleo_status} /></div>
                   <div className="grid gap-3 md:grid-cols-3">
                     <MetricCard label="Capacidade" value={fmtMetric(c.capacidade_avg, "%")} />

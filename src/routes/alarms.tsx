@@ -35,7 +35,7 @@ function AlarmsPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-        <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+        <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
           <div className="mb-4 flex items-center gap-2"><Bell className="h-5 w-5 text-primary" /><h2 className="font-display text-lg font-semibold">Timeline</h2></div>
           <div className="space-y-3">
             {timeline.map((item: any, idx: number) => (
@@ -79,7 +79,7 @@ function AlarmsPage() {
 
 function Panel({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+    <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
       <div className="mb-4 flex items-center gap-2">{icon}<h2 className="font-display text-lg font-semibold">{title}</h2></div>
       <div className="space-y-3">{children}</div>
     </div>

@@ -47,14 +47,14 @@ function TrendsPage() {
         <MetricCard label="Período" value={text(payload.label)} detail={`${text(payload.start_date)} → ${text(payload.end_date)}`} />
       </div>
 
-      <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+      <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
         <div className="mb-4 flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" /><h2 className="font-display text-lg font-semibold">Série principal</h2></div>
         <SimpleLineChart data={firstSeries || []} keys={lineKeys} height={340} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
         {groups.map((group: any) => (
-          <div key={group.id} className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+          <div key={group.id} className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
             <div className="mb-4 flex items-center justify-between"><h3 className="font-display text-lg font-semibold">{groupLabel(group.id)}</h3><span className="text-xs text-muted-foreground">{text(group.name)}</span></div>
             <div className="grid gap-2 text-sm">
               {Object.entries(group)
@@ -73,7 +73,7 @@ function TrendsPage() {
         {!groups.length && <EmptyData label="Nenhum grupo enviado em tendencias.contexts para este contexto." />}
       </div>
 
-      <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+      <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
         <h2 className="font-display text-lg font-semibold">Resumo automático do período</h2>
         <div className="mt-3 grid gap-2 md:grid-cols-3">
           {resumo.length ? resumo.map((item: any, idx: number) => <div key={idx} className="rounded-xl border border-border/45 bg-background/35 p-3 text-sm text-muted-foreground">{text(item)}</div>) : <EmptyData />}

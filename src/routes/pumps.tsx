@@ -35,7 +35,7 @@ function PumpsPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         {groups.map((group: any) => (
-          <button key={group.id} type="button" onClick={() => setActiveId(String(group.id))} className={cn("rounded-2xl border bg-surface-2/55 p-4 text-left transition", active?.id === group.id ? "border-primary/55" : "border-border/50 hover:border-primary/35")}>
+          <button key={group.id} type="button" onClick={() => setActiveId(String(group.id))} className={cn("rounded-[26px] border bg-surface-2/55 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)] p-4 text-left transition", active?.id === group.id ? "border-primary/55" : "border-border/50 hover:border-primary/35")}>
             <div className="flex items-start justify-between gap-3"><div><div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Grupo de bombas</div><div className="mt-1 font-display text-xl font-semibold">{groupLabel(group.id)}</div></div><StatusPill status={group.status_label || group.status} /></div>
             <img src={images[String(group.id)]} alt={`Bombas ${groupLabel(group.id)}`} className="mx-auto mt-3 h-32 w-full object-contain" />
             <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
@@ -56,7 +56,7 @@ function PumpsPage() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_1.15fr]">
-        <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+        <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
           <div className="mb-4 flex items-center gap-2"><Droplets className="h-5 w-5 text-primary" /><h2 className="font-display text-lg font-semibold">BAGs</h2></div>
           <div className="grid gap-3 md:grid-cols-2">
             {asArray(active.bombas).map((bag: any) => (
@@ -72,7 +72,7 @@ function PumpsPage() {
             ))}
           </div>
         </div>
-        <div className="rounded-2xl border border-border/50 bg-surface-2/55 p-4">
+        <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
           <div className="mb-4 flex items-center justify-between gap-3"><h2 className="font-display text-lg font-semibold">Tendências</h2><div className="flex rounded-full border border-border/60 bg-background/35 p-0.5 text-xs">{[["pressao","Pressão"],["bypass","Bypass"],["bombas","BAGs"]].map(([key,label])=><button key={key} onClick={()=>setTrend(key as any)} className={cn("rounded-full px-3 py-1.5", trend === key ? "bg-primary/20 text-primary" : "text-muted-foreground")}>{label}</button>)}</div></div>
           <SimpleLineChart data={seriesData || []} keys={keys} height={320} />
         </div>
