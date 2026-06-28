@@ -102,7 +102,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
           })}
         </nav>
         <div className="border-t border-border/40 px-3 py-3 text-[10px] text-muted-foreground">
-          <div className="text-[9px] uppercase tracking-[0.18em] opacity-60">v8.21.1 · API v2.3</div>
+          <div className="text-[9px] uppercase tracking-[0.18em] opacity-60">v8.21 · contrato v2.3.1</div>
         </div>
       </aside>
 
@@ -110,7 +110,7 @@ function AppShellInner({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-border/40 bg-background/70 px-4 backdrop-blur-xl">
           <div className="hidden md:block">
             <div className="font-display text-sm font-semibold leading-none">Visão Geral da Central</div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Expo Center Norte · Dados via API Dashboard</div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Expo Center Norte · Análise Operacional</div>
           </div>
           <div className="ml-auto flex items-center gap-3">
             <div className="hidden overflow-hidden rounded-full border border-border bg-surface-2/70 p-0.5 text-[11px] shadow-[inset_0_0_18px_rgba(0,180,255,0.06)] md:flex">

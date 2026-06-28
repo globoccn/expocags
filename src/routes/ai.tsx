@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Bot, Sparkles } from "lucide-react";
-import { EmptyData, MetricCard, PageState, SectionTitle, StatusPill } from "@/components/cag/api-render";
+import { Bot, Brain, CheckCircle2, Sparkles, Wrench } from "lucide-react";
 import { asArray, text, useDashboard } from "@/lib/dashboard-context";
+import { PageState, Panel, SectionHeader, StatusBadge } from "@/components/cag/render-only";
 
 export const Route = createFileRoute("/ai")({
   head: () => ({ meta: [{ title: "Análise IA — CAG Expo Center Norte" }] }),
@@ -10,80 +10,71 @@ export const Route = createFileRoute("/ai")({
 
 function AiPage() {
   const { payload, loading, error } = useDashboard();
-  const state = PageState({ loading, error });
-  if (state) return state;
-  if (!payload) return <EmptyData />;
+  const state = <PageState loading={loading} error={error} />;
+  if (loading || error || !payload) return state;
 
-  const ia = payload.assistente_ia || {};
-  const resumo = ia.resumo_periodo || {};
-  const diagnosticos = asArray(ia.diagnosticos);
+  const resumo = payload.assistente_ia?.resumo_periodo || {};
+  const diagnosticos = asArray(payload.assistente_ia?.diagnosticos);
+  const perguntas = asArray(payload.assistente_ia?.perguntas_rapidas);
   const recomendacoes = asArray(resumo.recomendacoes_prioritarias);
-  const equipamentos = asArray(resumo.equipamentos_em_atencao);
-  const ocorrencias = asArray(resumo.principais_ocorrencias);
 
   return (
     <div className="space-y-6">
-      <SectionTitle title="Análise IA" subtitle="Diagnósticos estruturados enviados pelo workflow. A frontend não cria diagnóstico nem causa provável." />
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard label="Período analisado" value={text(resumo.periodo || payload.label)} detail="payload.assistente_ia" />
-        <MetricCard label="Equipamentos em atenção" value={equipamentos.length} detail={equipamentos.slice(0, 2).join(" · ") || "--"} status={equipamentos.length ? "atencao" : "normal"} />
-        <MetricCard label="Diagnósticos" value={diagnosticos.length} detail="Itens recebidos" status={diagnosticos.some((d: any) => String(d.prioridade).includes("crit")) ? "critico" : diagnosticos.length ? "atencao" : "normal"} />
-        <MetricCard label="Ocorrências principais" value={ocorrencias.length} detail="Resumo do período" />
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
-          <div className="mb-4 flex items-center gap-2"><Bot className="h-5 w-5 text-primary" /><h2 className="font-display text-lg font-semibold">Diagnósticos</h2></div>
-          <div className="space-y-4">
-            {diagnosticos.map((diag: any, idx: number) => (
-              <div key={diag.id || idx} className="rounded-xl border border-border/45 bg-background/35 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{text(diag.equipamento)}</div>
-                    <div className="mt-1 font-semibold text-foreground">{text(diag.sintoma)}</div>
-                  </div>
-                  <StatusPill status={diag.prioridade} />
-                </div>
-                <div className="mt-4 grid gap-4 md:grid-cols-3">
-                  <ListBlock title="Evidências" items={diag.evidencias} />
-                  <ListBlock title="Possíveis causas" items={diag.possiveis_causas} />
-                  <ListBlock title="Ações recomendadas" items={diag.acoes_recomendadas} />
-                </div>
-                <p className="mt-3 text-xs text-muted-foreground">{text(diag.limite || diag.observacao)}</p>
-              </div>
-            ))}
-            {!diagnosticos.length && <EmptyData label="Sem diagnósticos enviados pelo workflow." />}
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
-            <div className="mb-4 flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /><h2 className="font-display text-lg font-semibold">Recomendações prioritárias</h2></div>
-            <ListBlock items={recomendacoes} />
-          </div>
-          <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
-            <h2 className="font-display text-lg font-semibold">Ocorrências principais</h2>
-            <ListBlock items={ocorrencias} />
-          </div>
-          <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
-            <h2 className="font-display text-lg font-semibold">Equipamentos em atenção</h2>
-            <ListBlock items={equipamentos} />
-          </div>
+      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-[radial-gradient(circle_at_top_left,rgba(139,92,246,0.22),transparent_38%),linear-gradient(135deg,rgba(10,20,35,0.92),rgba(3,7,18,0.96))] p-6">
+        <div className="absolute right-10 top-8 h-32 w-32 rounded-full bg-violet-400/10 blur-3xl" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+          <SectionHeader eyebrow="Análise IA" title="Assistente de Manutenção CAG" subtitle="Diagnósticos e recomendações estruturadas pelo workflow operacional." />
+          <div className="flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-400/10 px-4 py-2 text-sm text-violet-200"><Sparkles className="h-4 w-4" /> Análise do período</div>
         </div>
       </div>
+
+      <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <Panel>
+          <div className="mb-4 flex items-center gap-2 font-display text-lg font-semibold"><Brain className="h-5 w-5 text-violet-300" /> Resumo do período</div>
+          <div className="space-y-3 text-sm">
+            <Block label="Período" value={resumo.periodo || payload.label} />
+            <Block label="Equipamentos em atenção" value={asArray(resumo.equipamentos_em_atencao).join(", ") || "--"} />
+            <Block label="Principais ocorrências" value={asArray(resumo.principais_ocorrencias).join(" · ") || "--"} />
+          </div>
+        </Panel>
+        <Panel>
+          <div className="mb-4 flex items-center gap-2 font-display text-lg font-semibold"><Wrench className="h-5 w-5 text-primary" /> Recomendações prioritárias</div>
+          <div className="space-y-2">
+            {recomendacoes.length ? recomendacoes.map((item: any, idx: number) => <div key={idx} className="rounded-xl border border-border/45 bg-background/35 p-3 text-sm text-muted-foreground">{text(item)}</div>) : <div className="text-sm text-muted-foreground">Sem recomendações prioritárias.</div>}
+          </div>
+        </Panel>
+      </div>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        {diagnosticos.map((diag: any) => (
+          <Panel key={diag.id || `${diag.equipamento}-${diag.sintoma}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div><div className="font-display text-lg font-semibold">{text(diag.sintoma)}</div><div className="mt-1 text-sm text-muted-foreground">{text(diag.equipamento)}</div></div>
+              <StatusBadge status={diag.prioridade} />
+            </div>
+            <List title="Evidências" items={diag.evidencias} icon={<Bot className="h-4 w-4 text-primary" />} />
+            <List title="Possíveis causas" items={diag.possiveis_causas} />
+            <List title="Ações recomendadas" items={diag.acoes_recomendadas} icon={<CheckCircle2 className="h-4 w-4 text-emerald-300" />} />
+          </Panel>
+        ))}
+      </div>
+
+      {perguntas.length > 0 && (
+        <Panel>
+          <div className="mb-3 font-display text-lg font-semibold">Perguntas rápidas</div>
+          <div className="flex flex-wrap gap-2">{perguntas.map((q: any, idx: number) => <span key={idx} className="rounded-full border border-border bg-background/35 px-3 py-1.5 text-xs text-muted-foreground">{text(q)}</span>)}</div>
+        </Panel>
+      )}
     </div>
   );
 }
 
-function ListBlock({ title, items }: { title?: string; items: any }) {
-  const arr = asArray(items);
-  return (
-    <div>
-      {title && <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{title}</div>}
-      <ul className="space-y-2 text-sm text-muted-foreground">
-        {arr.length ? arr.map((item: any, idx: number) => <li key={idx} className="rounded-lg bg-white/5 px-3 py-2">{text(item)}</li>) : <li className="rounded-lg bg-white/5 px-3 py-2">--</li>}
-      </ul>
-    </div>
-  );
+function Block({ label, value }: { label: string; value: any }) {
+  return <div className="rounded-xl border border-border/45 bg-background/35 p-3"><div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</div><div className="mt-1 text-sm text-foreground">{text(value)}</div></div>;
+}
+
+function List({ title, items, icon }: { title: string; items: any; icon?: any }) {
+  const list = asArray(items);
+  if (!list.length) return null;
+  return <div className="mt-4"><div className="mb-2 flex items-center gap-2 text-sm font-semibold">{icon}{title}</div><div className="space-y-2">{list.map((item: any, idx: number) => <div key={idx} className="rounded-lg border border-border/40 bg-background/30 px-3 py-2 text-xs text-muted-foreground">{text(item)}</div>)}</div></div>;
 }

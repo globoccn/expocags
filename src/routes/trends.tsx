@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, CircleGauge, Droplets, Gauge, ThermometerSun } from "lucide-react";
 import { useState } from "react";
-import { EmptyData, MetricCard, PageState, SectionTitle, SimpleBarChart, SimpleLineChart, fmtMetric } from "@/components/cag/api-render";
-import { asArray, groupLabel, text, useDashboard } from "@/lib/dashboard-context";
+import { asArray, text, useDashboard } from "@/lib/dashboard-context";
+import { ApiBarChart, ApiLineChart, CardMetric, PageState, Panel, SectionHeader } from "@/components/cag/render-only";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/trends")({
@@ -10,84 +10,46 @@ export const Route = createFileRoute("/trends")({
   component: TrendsPage,
 });
 
-const contexts = [
-  { key: "agua_gelada", label: "Água Gelada" },
-  { key: "capacidade", label: "Capacidade" },
-  { key: "pressoes", label: "Pressões" },
-  { key: "bombas", label: "Bombas" },
-] as const;
+const tabs = [
+  { key: "agua_gelada", label: "Água Gelada", icon: ThermometerSun, keys: [{ key: "entrada", label: "Entrada" }, { key: "saida", label: "Saída" }, { key: "setpoint", label: "Setpoint" }, { key: "delta_t", label: "Delta T" }] },
+  { key: "capacidade", label: "Capacidade", icon: CircleGauge, keys: [{ key: "total", label: "Total" }, { key: "circuito_a", label: "Circuito A" }, { key: "circuito_b", label: "Circuito B" }] },
+  { key: "pressoes", label: "Pressões", icon: Gauge, keys: [{ key: "succao_a", label: "Sucção A" }, { key: "descarga_a", label: "Descarga A" }, { key: "succao_b", label: "Sucção B" }, { key: "descarga_b", label: "Descarga B" }] },
+  { key: "bombas", label: "Bombas", icon: Droplets, keys: [{ key: "linha", label: "Linha" }, { key: "setpoint", label: "Setpoint" }, { key: "abertura", label: "Bypass" }] },
+];
 
 function TrendsPage() {
   const { payload, loading, error } = useDashboard();
-  const [ctxKey, setCtxKey] = useState<(typeof contexts)[number]["key"]>("agua_gelada");
-  const state = PageState({ loading, error });
-  if (state) return state;
-  if (!payload) return <EmptyData />;
+  const state = <PageState loading={loading} error={error} />;
+  const [tab, setTab] = useState("agua_gelada");
+  if (loading || error || !payload) return state;
 
-  const ctx = payload.tendencias?.contexts?.[ctxKey] || {};
-  const groups = asArray(ctx.groups);
-  const resumo = asArray(payload.tendencias?.resumo_automatico_periodo);
-
-  const firstSeries = groups[0]?.series;
-  const lineKeys = getKeys(ctxKey, firstSeries);
+  const current = tabs.find((item) => item.key === tab) || tabs[0];
+  const context = payload.tendencias?.contexts?.[current.key] || {};
+  const groups = asArray(context.groups);
+  const summary = asArray(payload.tendencias?.resumo_automatico_periodo);
 
   return (
     <div className="space-y-6">
-      <SectionTitle title="Tendências" subtitle="Séries renderizadas a partir de tendencias.contexts.*.groups[].series. Sem geração local de curvas." />
-
-      <div className="flex flex-wrap gap-2">
-        {contexts.map((item) => (
-          <button key={item.key} type="button" onClick={() => setCtxKey(item.key)} className={cn("rounded-full border px-4 py-2 text-sm font-semibold", ctxKey === item.key ? "border-primary/50 bg-primary/20 text-primary" : "border-border/60 bg-surface-2/50 text-muted-foreground hover:text-foreground")}>{item.label}</button>
-        ))}
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <MetricCard label="Contexto" value={text(ctx.title)} detail={text(ctx.unit)} />
-        <MetricCard label="Grupos recebidos" value={groups.length} detail="groups[]" />
-        <MetricCard label="Período" value={text(payload.label)} detail={`${text(payload.start_date)} → ${text(payload.end_date)}`} />
-      </div>
-
-      <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
-        <div className="mb-4 flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" /><h2 className="font-display text-lg font-semibold">Série principal</h2></div>
-        <SimpleLineChart data={firstSeries || []} keys={lineKeys} height={340} />
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <SectionHeader eyebrow="Tendências" title="Leitura consolidada do período" subtitle="Séries e distribuições recebidas diretamente do workflow operacional." />
+        <div className="flex flex-wrap gap-2">{tabs.map((item) => <button key={item.key} type="button" onClick={() => setTab(item.key)} className={cn("rounded-full border px-4 py-2 text-sm font-semibold transition-all", tab === item.key ? "border-primary/50 bg-primary/20 text-primary" : "border-border bg-surface-2/45 text-muted-foreground hover:text-foreground")}><item.icon className="mr-2 inline h-4 w-4" />{item.label}</button>)}</div>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-3">
-        {groups.map((group: any) => (
-          <div key={group.id} className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
-            <div className="mb-4 flex items-center justify-between"><h3 className="font-display text-lg font-semibold">{groupLabel(group.id)}</h3><span className="text-xs text-muted-foreground">{text(group.name)}</span></div>
-            <div className="grid gap-2 text-sm">
-              {Object.entries(group)
-                .filter(([key, value]) => !["id", "name", "series", "distribution"].includes(key) && typeof value !== "object")
-                .map(([key, value]) => (
-                  <div key={key} className="flex justify-between rounded-lg bg-background/35 px-3 py-2"><span className="text-muted-foreground">{key}</span><span className="font-mono text-foreground">{fmtMetric(value as any)}</span></div>
-                ))}
-            </div>
-            {group.distribution?.bins && (
-              <div className="mt-4">
-                <SimpleBarChart data={group.distribution.bins} xKey="label" yKey="horas" height={180} />
-              </div>
-            )}
-          </div>
-        ))}
-        {!groups.length && <EmptyData label="Nenhum grupo enviado em tendencias.contexts para este contexto." />}
+        {groups.map((group: any) => <CardMetric key={group.id || group.name} label={text(group.name)} value={text(group.delta_t ?? group.total ?? group.pressao_linha ?? group.capacidade_avg)} detail={text(context.unit)} status={group.status} icon={BarChart3} />)}
       </div>
 
-      <div className="rounded-[26px] border border-border/50 bg-surface-2/55 p-4 shadow-[inset_0_0_34px_rgba(255,255,255,0.035)]">
-        <h2 className="font-display text-lg font-semibold">Resumo automático do período</h2>
-        <div className="mt-3 grid gap-2 md:grid-cols-3">
-          {resumo.length ? resumo.map((item: any, idx: number) => <div key={idx} className="rounded-xl border border-border/45 bg-background/35 p-3 text-sm text-muted-foreground">{text(item)}</div>) : <EmptyData />}
+      <Panel>
+        <div className="mb-4"><div className="font-display text-lg font-semibold">{text(context.title || current.label)}</div><div className="text-xs text-muted-foreground">Comparativo por grupo</div></div>
+        <div className="grid gap-5">
+          {groups.map((group: any) => <div key={group.id || group.name} className="rounded-2xl border border-border/45 bg-background/25 p-4"><div className="mb-3 font-semibold">{text(group.name)}</div><ApiLineChart data={group.series?.pressao || group.series?.bypass || group.series} keys={current.keys} height={220} /></div>)}
         </div>
+      </Panel>
+
+      <div className="grid gap-4 xl:grid-cols-[1fr_0.9fr]">
+        <Panel><div className="mb-4 font-display text-lg font-semibold">Distribuição</div>{groups[0]?.distribution?.bins ? <ApiBarChart data={groups[0].distribution.bins} /> : <div className="text-sm text-muted-foreground">Distribuição não disponível para este contexto.</div>}</Panel>
+        <Panel><div className="mb-4 font-display text-lg font-semibold">Resumo automático</div><div className="space-y-2">{summary.map((item: any, idx: number) => <div key={idx} className="rounded-xl border border-border/45 bg-background/35 p-3 text-sm text-muted-foreground">{text(item)}</div>)}</div></Panel>
       </div>
     </div>
   );
-}
-
-function getKeys(ctxKey: string, series: any[]) {
-  if (ctxKey === "agua_gelada") return [{ key: "entrada", label: "Entrada" }, { key: "saida", label: "Saída" }, { key: "setpoint", label: "Setpoint" }, { key: "delta_t", label: "Delta T" }];
-  if (ctxKey === "capacidade") return [{ key: "circuito_a", label: "Circuito A" }, { key: "circuito_b", label: "Circuito B" }, { key: "total", label: "Total" }];
-  if (ctxKey === "pressoes") return [{ key: "succao_a", label: "Sucção A" }, { key: "descarga_a", label: "Descarga A" }, { key: "succao_b", label: "Sucção B" }, { key: "descarga_b", label: "Descarga B" }];
-  const row = asArray(series)[0] || {};
-  if (row.linha !== undefined || row.setpoint !== undefined) return [{ key: "linha", label: "Linha" }, { key: "setpoint", label: "Setpoint" }];
-  return [{ key: "abertura", label: "Abertura" }];
 }

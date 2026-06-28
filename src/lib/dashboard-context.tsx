@@ -12,14 +12,17 @@ type DashboardContextValue = {
 };
 
 const DashboardContext = createContext<DashboardContextValue | null>(null);
+const storageKey = "cag-period-v2";
 
-const periodStorageKey = "cag-period-v2";
-
-const normalizePeriod = (value: string | null | undefined): DashboardPeriod => {
-  if (value === "week" || value === "7d") return "week";
-  if (value === "month" || value === "1m") return "month";
+export const normalizePeriod = (value: string | null | undefined): DashboardPeriod => {
+  if (value === "week" || value === "7d" || value === "semana") return "week";
+  if (value === "month" || value === "1m" || value === "mes" || value === "mês") return "month";
   return "d_1";
 };
+
+export const toLegacyPeriod = (period: DashboardPeriod) => (period === "d_1" ? "d1" : period === "week" ? "7d" : "1m");
+
+export const periodLabel = (period: DashboardPeriod) => (period === "d_1" ? "D-1" : period === "week" ? "7 dias" : "1 mês");
 
 const apiBase = () => {
   const fromEnv = import.meta.env.VITE_API_URL as string | undefined;
@@ -35,16 +38,16 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const stored = normalizePeriod(window.localStorage.getItem(periodStorageKey) || window.localStorage.getItem("cag-period"));
-    setPeriodState(stored);
+    setPeriodState(normalizePeriod(window.localStorage.getItem(storageKey) || window.localStorage.getItem("cag-period")));
   }, []);
 
   const setPeriod = (next: DashboardPeriod) => {
     setPayload(null);
     setPeriodState(next);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(periodStorageKey, next);
-      window.localStorage.setItem("cag-period", next === "d_1" ? "d1" : next === "week" ? "7d" : "1m");
+      window.localStorage.setItem(storageKey, next);
+      window.localStorage.setItem("cag-period", toLegacyPeriod(next));
+      window.dispatchEvent(new CustomEvent("cag-period-change", { detail: toLegacyPeriod(next) }));
     }
   };
 
@@ -93,27 +96,33 @@ export function useDashboard() {
   return ctx;
 }
 
-export const periodLabel = (period: DashboardPeriod) =>
-  period === "d_1" ? "D-1" : period === "week" ? "7 dias" : "1 mês";
-
-export const fmt = (value: any, suffix = "", digits = 1) => {
-  const n = Number(value);
-  if (value === null || value === undefined || value === "" || !Number.isFinite(n)) return "--";
-  return `${n.toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits })}${suffix}`;
-};
+export const asArray = (value: any) => (Array.isArray(value) ? value : []);
 
 export const text = (value: any) => {
   if (value === null || value === undefined || value === "") return "--";
   return String(value);
 };
 
-export const asArray = (value: any) => (Array.isArray(value) ? value : []);
+export const numberText = (value: any, suffix = "", digits = 1) => {
+  const n = Number(value);
+  if (value === null || value === undefined || value === "" || !Number.isFinite(n)) return "--";
+  return `${n.toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits })}${suffix}`;
+};
 
-export const statusClass = (status: any) => {
+export const statusTone = (status: any): "ok" | "warn" | "crit" | "info" => {
   const s = String(status || "").toLowerCase();
-  if (s.includes("crit")) return "border-red-500/40 bg-red-500/10 text-red-200";
-  if (s.includes("aten") || s.includes("warn") || s.includes("media")) return "border-amber-400/40 bg-amber-400/10 text-amber-100";
-  return "border-emerald-400/35 bg-emerald-400/10 text-emerald-100";
+  if (s.includes("crit") || s.includes("alta") || s.includes("red")) return "crit";
+  if (s.includes("aten") || s.includes("warn") || s.includes("media") || s.includes("média")) return "warn";
+  if (s.includes("normal") || s.includes("ok")) return "ok";
+  return "info";
+};
+
+export const statusLabel = (status: any) => {
+  const s = String(status || "").toLowerCase();
+  if (s.includes("crit") || s.includes("alta")) return "Crítico";
+  if (s.includes("aten") || s.includes("media") || s.includes("média")) return "Atenção";
+  if (s.includes("normal") || s.includes("ok")) return "Normal";
+  return text(status);
 };
 
 export const groupLabel = (id: any) => {
@@ -123,3 +132,5 @@ export const groupLabel = (id: any) => {
   if (value === "branco" || value === "white") return "Branco";
   return text(id);
 };
+
+export const firstDefined = (...values: any[]) => values.find((value) => value !== null && value !== undefined && value !== "");
