@@ -30,10 +30,25 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { period: apiPeriod, data: apiData } = useDashboardPeriod();
   const [now, setNow] = useState("");
-  const [period, setPeriod] = useState(() => {
-    if (typeof window === "undefined") return "d1";
-    return window.localStorage.getItem("cag-period") || "d1";
-  });
+  const [period, setPeriod] = useState("d1");
+
+  useEffect(() => {
+    const readStored = () => {
+      const stored = window.localStorage.getItem("cag-period");
+      if (stored === "d1" || stored === "7d" || stored === "1m") setPeriod(stored);
+    };
+    readStored();
+    const onPeriodChange = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (detail === "d1" || detail === "7d" || detail === "1m") setPeriod(detail);
+    };
+    window.addEventListener("cag-period-change", onPeriodChange);
+    window.addEventListener("storage", readStored);
+    return () => {
+      window.removeEventListener("cag-period-change", onPeriodChange);
+      window.removeEventListener("storage", readStored);
+    };
+  }, []);
 
   useEffect(() => {
     const tick = () => {

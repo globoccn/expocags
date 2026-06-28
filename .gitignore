@@ -13,7 +13,6 @@ dist-ssr
 .output
 .vinxi
 .tanstack/**
-package-lock.json
 .nitro
 *.local
 
@@ -31,3 +30,4 @@ package-lock.json
 *.njsproj
 *.sln
 *.sw?
+package-lock.json

@@ -270,6 +270,8 @@ function ChillersPage() {
   const [trendContext, setTrendContext] = useState<TrendContext>("water");
   const active = chillers.find((c) => c.id === activeId) || chillers[0];
   const selectedPeriod = periodOptions.find((p) => p.key === period) || periodOptions[0];
+  const trendData = useMemo(() => (active ? buildTrendData(active, period) : []), [active, period]);
+
   if (loading || !apiPayload) {
     return <div className="glass-card p-6 text-sm text-muted-foreground">Carregando dados reais dos chillers...</div>;
   }
@@ -282,7 +284,6 @@ function ChillersPage() {
   const selectedDateLabel = apiPayload?.period?.label || selectedPeriod.label;
   const selectedDateDetail = apiPayload?.period?.date || apiPayload?.period?.range || apiPayload?.period?.end_date || "período selecionado";
   const status = chillerStatus(active);
-  const trendData = useMemo(() => buildTrendData(active, period), [active, period]);
   const activeTrend = trendContexts[trendContext];
   const activeYAxis = trendYAxisConfig(trendContext);
   const color = chillerColors[active.id];

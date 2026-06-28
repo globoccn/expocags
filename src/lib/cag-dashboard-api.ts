@@ -41,26 +41,25 @@ export async function fetchDashboardPeriod(period: UiPeriod, signal?: AbortSigna
 }
 
 export function useGlobalPeriod() {
-  const [period, setPeriod] = useState<UiPeriod>(() => {
-    if (typeof window === "undefined") return "d1";
-    const stored = window.localStorage.getItem("cag-period") as UiPeriod | null;
-    return stored === "7d" || stored === "1m" || stored === "d1" ? stored : "d1";
-  });
+  // Mantém SSR e primeiro render do cliente idênticos para evitar hydration mismatch.
+  // O valor salvo no navegador só é aplicado depois da hidratação.
+  const [period, setPeriod] = useState<UiPeriod>("d1");
 
   useEffect(() => {
+    const readStored = () => {
+      const stored = window.localStorage.getItem("cag-period") as UiPeriod | null;
+      if (stored === "d1" || stored === "7d" || stored === "1m") setPeriod(stored);
+    };
+    readStored();
     const onChange = (event: Event) => {
       const detail = (event as CustomEvent).detail as UiPeriod | undefined;
       if (detail === "d1" || detail === "7d" || detail === "1m") setPeriod(detail);
     };
-    const onStorage = () => {
-      const stored = window.localStorage.getItem("cag-period") as UiPeriod | null;
-      if (stored === "d1" || stored === "7d" || stored === "1m") setPeriod(stored);
-    };
     window.addEventListener("cag-period-change", onChange);
-    window.addEventListener("storage", onStorage);
+    window.addEventListener("storage", readStored);
     return () => {
       window.removeEventListener("cag-period-change", onChange);
-      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("storage", readStored);
     };
   }, []);
 
