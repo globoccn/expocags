@@ -17,6 +17,7 @@ import chillerBlue from "@/assets/chiller-blue.png";
 import chillerRed from "@/assets/chiller-red.png";
 import chillerWhite from "@/assets/chiller-white.png";
 import { chartColors, tooltipStyle } from "@/components/cag/chart-wrap";
+import { Sparkline } from "@/components/cag/sparkline";
 import { cn } from "@/lib/utils";
 import { homePageData, labelForPeriod, useDashboard } from "@/lib/dashboard-api";
 
@@ -33,7 +34,17 @@ export const Route = createFileRoute("/")({
 type PeriodKey = "d1" | "week" | "month";
 type Tone = "info" | "ok" | "warn" | "crit" | "ai";
 
-type HomeKpi = { label: string; value: string; detail: string; previous: string; delta: string; deltaTone: "up" | "down" | "neutral"; icon: typeof CircuitBoard; tone: Tone };
+type HomeKpi = {
+  label: string;
+  value: string;
+  detail: string;
+  previous: string;
+  delta: string;
+  deltaTone: "up" | "down" | "neutral";
+  sparkline?: { i: number; v: number }[];
+  icon: typeof CircuitBoard;
+  tone: Tone;
+};
 type HomeChillerStatus = { id: "azul" | "vermelho" | "branco"; name: string; status: "Normal" | "Atenção"; hours: string; deltaT: string; capacity: string; setpoint: string; note: string; tone: Tone };
 
 const periodConfig: Record<PeriodKey, { comparison: string }> = {
@@ -59,9 +70,10 @@ const chillerAccent = {
 const chillerImages = { azul: chillerBlue, vermelho: chillerRed, branco: chillerWhite };
 
 function Delta({ tone, value }: { tone: "up" | "down" | "neutral"; value: string }) {
-  const classes = tone === "up" ? "text-status-ok" : tone === "down" ? "text-status-ok" : "text-muted-foreground";
-  const symbol = tone === "up" ? "▲" : tone === "down" ? "▼" : "—";
-  return <span className={cn("font-mono font-semibold", classes)}>{symbol} {value}</span>;
+  const clean = value && value !== "--";
+  const classes = tone === "up" ? "text-status-ok" : tone === "down" ? "text-status-warn" : "text-muted-foreground";
+  const symbol = tone === "up" ? "↗" : tone === "down" ? "↘" : "—";
+  return <span className={cn("font-mono font-semibold", classes)}>{clean ? `${symbol} ${value}` : "—"}</span>;
 }
 
 function StatusPill({ tone, children }: { tone: Tone; children: ReactNode }) {
@@ -72,24 +84,34 @@ function StatusPill({ tone, children }: { tone: Tone; children: ReactNode }) {
 function KpiCard({ item }: { item: HomeKpi }) {
   const Icon = item.icon;
   const t = toneClasses[item.tone];
+  const spark = Array.isArray(item.sparkline) ? item.sparkline.filter((p) => Number.isFinite(Number(p?.v))) : [];
   return (
-    <article className={cn("glass-card group relative min-h-[138px] overflow-hidden p-4 transition-all duration-300 hover:-translate-y-0.5", t.border, t.glow)}>
-      <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent opacity-70", t.soft)} />
-      <div className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-current opacity-[0.08] blur-3xl" />
-      <div className="relative flex items-start justify-between gap-3">
-        <div className={cn("grid h-12 w-12 shrink-0 place-items-center rounded-xl border", t.border, t.bg, t.text)}>
-          <Icon className="h-6 w-6" />
+    <article className={cn("glass-card group relative min-h-[162px] overflow-hidden p-4 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.01]", t.border, t.glow)}>
+      <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent opacity-75", t.soft)} />
+      <div className="pointer-events-none absolute -right-14 -top-14 h-36 w-36 rounded-full bg-current opacity-[0.10] blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+      <div className="relative flex h-full flex-col">
+        <div className="flex items-start justify-between gap-3">
+          <div className={cn("grid h-12 w-12 shrink-0 place-items-center rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]", t.border, t.bg, t.text)}>
+            <Icon className="h-6 w-6 drop-shadow-[0_0_10px_currentColor]" />
+          </div>
+          <div className={cn("rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em]", t.border, t.bg, t.text)}>
+            Consolidado
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <div className={cn("text-[10px] font-bold uppercase tracking-[0.14em]", t.text)}>{item.label}</div>
+        <div className="mt-3 min-w-0 flex-1">
+          <div className={cn("text-[10px] font-bold uppercase tracking-[0.16em]", t.text)}>{item.label}</div>
           <div className="mt-2 flex items-end gap-2">
             <span className="font-display text-4xl font-bold leading-none tracking-tight tabular-nums">{item.value}</span>
             <span className="mb-1 text-sm text-muted-foreground">{item.detail}</span>
           </div>
-          <div className="mt-3 flex items-center justify-between border-t border-border/35 pt-2 text-[11px] text-muted-foreground">
-            <span>{item.previous}</span>
+          <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-3 border-t border-border/35 pt-2 text-[11px] text-muted-foreground">
+            <span className="truncate">{item.previous || "Período anterior"}</span>
             <Delta tone={item.deltaTone} value={item.delta} />
           </div>
+        </div>
+        <div className="-mx-1 mt-2 h-[34px] opacity-95">
+          {spark.length ? <Sparkline data={spark} tone={item.tone} height={34} /> : <div className="h-full rounded-lg border border-border/25 bg-black/10" />}
         </div>
       </div>
     </article>
@@ -101,7 +123,7 @@ function ChillerStatusCard({ item }: { item: HomeChillerStatus }) {
   const image = chillerImages[item.id];
   const isWarn = item.tone === "warn";
   return (
-    <Link to="/chillers/$id" params={{ id: item.id }} className="group relative min-h-[300px] overflow-hidden rounded-xl border border-border/45 bg-surface-2/35 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/50">
+    <Link to="/chillers/$id" params={{ id: item.id }} className="glass-card group relative min-h-[300px] overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.005] hover:border-primary/50">
       <div className="pointer-events-none absolute inset-0 opacity-60" style={{ background: `radial-gradient(circle at 18% 38%, ${color.replace(")", " / 0.26)")}, transparent 36%)` }} />
       <div className="relative flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -126,7 +148,7 @@ function ChillerStatusCard({ item }: { item: HomeChillerStatus }) {
 
 function UnifiedEvolutionChart({ data }: { data: any[] }) {
   return (
-    <section className="glass-card overflow-hidden p-5">
+    <section className="glass-card overflow-hidden p-5 shadow-[0_0_60px_oklch(0.78_0.2_220_/_0.08)]">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-xl font-bold">Evolução dos principais indicadores</h2>
@@ -147,10 +169,14 @@ function UnifiedEvolutionChart({ data }: { data: any[] }) {
             <YAxis yAxisId="pct" domain={[0, 100]} stroke={chartColors.muted} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
             <YAxis yAxisId="temp" orientation="right" domain={[0, 45]} stroke={chartColors.muted} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}°C`} />
             <Tooltip contentStyle={tooltipStyle} formatter={(value: any, name: any) => [value === null || value === undefined ? "--" : `${Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}${String(name).includes("Capacidade") || String(name).includes("Cobertura") ? "%" : "°C"}`, name]} />
-            <Line yAxisId="pct" type="monotone" dataKey="capacidade_media" name="Capacidade média utilizada" stroke="#38bdf8" strokeWidth={2.4} dot={false} activeDot={{ r: 4 }} />
-            <Line yAxisId="temp" type="monotone" dataKey="delta_t_medio" name="Delta T médio" stroke="#fb2d5c" strokeWidth={2.4} dot={false} activeDot={{ r: 4 }} />
-            <Line yAxisId="temp" type="monotone" dataKey="temperatura_externa" name="Temperatura externa" stroke="#facc15" strokeWidth={2.4} dot={false} activeDot={{ r: 4 }} />
-            <Line yAxisId="pct" type="monotone" dataKey="cobertura_leituras" name="Cobertura das leituras" stroke="#22c55e" strokeWidth={2} strokeDasharray="5 5" dot={false} activeDot={{ r: 4 }} />
+            <Line yAxisId="pct" type="monotone" dataKey="capacidade_media" stroke="#38bdf8" strokeWidth={7} strokeOpacity={0.16} dot={false} activeDot={false} legendType="none" />
+            <Line yAxisId="temp" type="monotone" dataKey="delta_t_medio" stroke="#fb2d5c" strokeWidth={7} strokeOpacity={0.14} dot={false} activeDot={false} legendType="none" />
+            <Line yAxisId="temp" type="monotone" dataKey="temperatura_externa" stroke="#facc15" strokeWidth={7} strokeOpacity={0.14} dot={false} activeDot={false} legendType="none" />
+            <Line yAxisId="pct" type="monotone" dataKey="cobertura_leituras" stroke="#22c55e" strokeWidth={5} strokeOpacity={0.12} dot={false} activeDot={false} legendType="none" />
+            <Line yAxisId="pct" type="monotone" dataKey="capacidade_media" name="Capacidade média utilizada" stroke="#38bdf8" strokeWidth={2.8} dot={false} activeDot={{ r: 5, strokeWidth: 2 }} />
+            <Line yAxisId="temp" type="monotone" dataKey="delta_t_medio" name="Delta T médio" stroke="#fb2d5c" strokeWidth={2.8} dot={false} activeDot={{ r: 5, strokeWidth: 2 }} />
+            <Line yAxisId="temp" type="monotone" dataKey="temperatura_externa" name="Temperatura externa" stroke="#facc15" strokeWidth={2.8} dot={false} activeDot={{ r: 5, strokeWidth: 2 }} />
+            <Line yAxisId="pct" type="monotone" dataKey="cobertura_leituras" name="Cobertura das leituras" stroke="#22c55e" strokeWidth={2.2} strokeDasharray="5 5" dot={false} activeDot={{ r: 5, strokeWidth: 2 }} />
           </LineChart>
         </ResponsiveContainer>
       </div>

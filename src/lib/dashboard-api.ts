@@ -254,13 +254,17 @@ export function homePageData(payload: ApiPayload, period: UiPeriod, icons: any) 
   const toneFromStatus = (s: any) => statusTone(s) === "ok" ? "ok" : statusTone(s) === "crit" ? "crit" : "warn";
   const mk = (id: string, icon: any, tone: any, fallbackLabel: string, fallbackDetail = "") => {
     const c = cardBy(id);
+    const rawSpark = Array.isArray(c.sparkline) ? c.sparkline : Array.isArray(c.spark) ? c.spark : [];
     return {
       label: c.label || fallbackLabel,
       value: field(c.value),
       detail: c.detail || fallbackDetail,
-      previous: c.previous || "",
-      delta: c.delta || "",
-      deltaTone: c.deltaTone || "neutral",
+      previous: c.previous || c.comparison?.label || "",
+      delta: c.delta || c.comparison?.text || "",
+      deltaTone: c.deltaTone || c.comparison?.direction || "neutral",
+      sparkline: rawSpark
+        .map((p: any, i: number) => ({ i: Number(p?.i ?? i), v: Number(p?.v ?? p) }))
+        .filter((p: any) => Number.isFinite(p.v)),
       icon,
       tone: c.status ? toneFromStatus(c.status) : tone,
     };

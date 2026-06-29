@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { Area, AreaChart, ResponsiveContainer } from "recharts";
 
 const palette: Record<string, string> = {
@@ -23,7 +24,7 @@ export function Sparkline({
   height?: number;
 }) {
   const color = palette[tone] ?? palette.default;
-  const id = `sp-${tone}-${Math.random().toString(36).slice(2, 7)}`;
+  const id = useId().replace(/:/g, "-");
   return (
     <div style={{ width: "100%", height }}>
       <ResponsiveContainer>
