@@ -10,21 +10,13 @@ import {
   Wrench,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart as ReLineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import pumpBlue from "@/assets/pump-blue.png";
 import pumpRed from "@/assets/pump-red.png";
 import pumpWhite from "@/assets/pump-white.png";
 import { type ChillerData, type ChillerId, type PumpData } from "@/data/mockCagData";
 import { labelForPeriod, legacyChillers, useDashboard } from "@/lib/dashboard-api";
 import { cn } from "@/lib/utils";
+import { EnterpriseLineChart } from "@/components/cag/enterprise-line-chart";
 
 export const Route = createFileRoute("/pumps")({
   head: () => ({ meta: [{ title: "Bombas — CAG Expo Center Norte" }] }),
@@ -443,39 +435,26 @@ function PumpsPage() {
             ))}
           </div>
 
-          <div className="enterprise-chart-panel h-[275px] rounded-2xl border border-border/35 bg-background/20 p-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <ReLineChart data={trendData} margin={{ top: 10, right: 18, bottom: 0, left: 0 }}>
-                <CartesianGrid stroke="rgba(148,163,184,0.12)" strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="t" tick={{ fill: "#94a3b8", fontSize: 11 }} axisLine={false} tickLine={false} interval={period === "month" ? 4 : 0} />
-                <YAxis
-                  domain={activeYAxis.domain}
-                  ticks={activeYAxis.ticks}
-                  tick={{ fill: "#94a3b8", fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                  width={44}
-                  tickFormatter={(value) => trendContext === "pumps" ? (Number(value) === 1 ? "Lig." : "Desl.") : `${value}`}
-                />
-                <Tooltip
-                  contentStyle={{ background: "rgba(8,13,26,0.96)", border: "1px solid rgba(148,163,184,0.25)", borderRadius: 12, color: "#e5edf8" }}
-                  labelStyle={{ color: "#cbd5e1" }}
-                />
-                {activeTrend.lines.map((line) => (
-                  <Line
-                    key={line.key}
-                    type="monotone"
-                    dataKey={line.key}
-                    stroke={line.color}
-                    strokeWidth={2.8}
-                    dot={false}
-                    strokeDasharray={line.dashed ? "4 4" : undefined}
-                    name={line.label}
-                  />
-                ))}
-              </ReLineChart>
-            </ResponsiveContainer>
-          </div>
+          <EnterpriseLineChart
+            data={trendData}
+            xKey="t"
+            height={275}
+            leftDomain={activeYAxis.domain}
+            leftTicks={activeYAxis.ticks}
+            leftUnit={trendContext === "pumps" ? "" : activeTrend.unit === "%" ? "%" : ""}
+            showLegend={false}
+            className="border-border/35 bg-background/20"
+            series={activeTrend.lines.map((line, index) => ({
+              key: line.key,
+              label: line.label,
+              unit: trendContext === "pumps" ? "" : activeTrend.unit,
+              axis: "left" as const,
+              color: line.color,
+              dashed: line.dashed,
+              fill: index === 0 && !line.dashed,
+              valueFormatter: trendContext === "pumps" ? (value: number) => (Number(value) === 1 ? "Ligado" : "Desligado") : undefined,
+            }))}
+          />
         </div>
 
         <div className="glass-card p-5">

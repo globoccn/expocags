@@ -7,21 +7,13 @@ import {
   Waves,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart as ReLineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import chillerBlue from "@/assets/chiller-blue.png";
 import chillerRed from "@/assets/chiller-red.png";
 import chillerWhite from "@/assets/chiller-white.png";
 import { chillerTheme, type ChillerData, type ChillerId } from "@/data/mockCagData";
 import { labelForPeriod, legacyChillers, useDashboard, text, textInt } from "@/lib/dashboard-api";
 import { cn } from "@/lib/utils";
+import { EnterpriseLineChart } from "@/components/cag/enterprise-line-chart";
 
 export const Route = createFileRoute("/chillers")({
   head: () => ({ meta: [{ title: "Chillers — CAG Expo Center Norte" }] }),
@@ -333,54 +325,25 @@ function ChillersPage() {
               ))}
             </div>
           </div>
-          <div className="enterprise-chart-panel relative h-64 overflow-hidden rounded-2xl border border-border/30 bg-background/20 p-3">
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(56,189,248,0.10),transparent_55%)]" />
-            <ResponsiveContainer width="100%" height="100%">
-              <ReLineChart data={trendData} margin={{ left: -10, right: 10, top: 8, bottom: 0 }}>
-                <CartesianGrid stroke="rgba(148,163,184,0.12)" vertical={false} />
-                <XAxis
-                  dataKey="t"
-                  tick={{ fill: "#94a3b8", fontSize: 10 }}
-                  tickLine={false}
-                  axisLine={false}
-                  interval={period === "month" ? 4 : period === "week" ? 0 : 3}
-                />
-                <YAxis
-                  tick={{ fill: "#94a3b8", fontSize: 10 }}
-                  tickLine={false}
-                  axisLine={false}
-                  width={44}
-                  domain={activeYAxis.domain}
-                  ticks={activeYAxis.ticks}
-                  tickFormatter={(value) => `${value} ${activeTrend.unit}`}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "rgba(10,17,30,0.94)",
-                    border: "1px solid rgba(56,189,248,0.22)",
-                    borderRadius: 12,
-                    color: "#e2e8f0",
-                    boxShadow: "0 18px 55px rgba(0,0,0,0.35)",
-                  }}
-                  labelStyle={{ color: "#bae6fd" }}
-                  formatter={(value, name) => [`${value} ${activeTrend.unit}`, name]}
-                />
-                {activeTrend.lines.map((line) => (
-                  <Line
-                    key={line.key}
-                    type="monotone"
-                    dataKey={line.key}
-                    name={line.label}
-                    stroke={line.color}
-                    strokeWidth={3}
-                    strokeDasharray={line.dashed ? "5 5" : undefined}
-                    dot={false}
-                    activeDot={{ r: 5, strokeWidth: 2 }}
-                  />
-                ))}
-              </ReLineChart>
-            </ResponsiveContainer>
-          </div>
+          <EnterpriseLineChart
+            data={trendData}
+            xKey="t"
+            height={256}
+            leftDomain={activeYAxis.domain}
+            leftTicks={activeYAxis.ticks}
+            leftUnit={activeTrend.unit === "status" ? "" : ` ${activeTrend.unit}`}
+            showLegend={false}
+            className="border-border/30 bg-background/20"
+            series={activeTrend.lines.map((line, index) => ({
+              key: line.key,
+              label: line.label,
+              unit: activeTrend.unit === "status" ? "" : activeTrend.unit,
+              axis: "left" as const,
+              color: line.color,
+              dashed: line.dashed,
+              fill: index === 0 && !line.dashed,
+            }))}
+          />
         </div>
 
       </section>

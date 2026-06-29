@@ -12,12 +12,11 @@ import {
   ThermometerSun,
 } from "lucide-react";
 import { type ReactNode } from "react";
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import chillerBlue from "@/assets/chiller-blue.png";
 import chillerRed from "@/assets/chiller-red.png";
 import chillerWhite from "@/assets/chiller-white.png";
-import { chartColors, tooltipStyle } from "@/components/cag/chart-wrap";
 import { Sparkline } from "@/components/cag/sparkline";
+import { EnterpriseLineChart } from "@/components/cag/enterprise-line-chart";
 import { cn } from "@/lib/utils";
 import { homePageData, labelForPeriod, useDashboard } from "@/lib/dashboard-api";
 
@@ -146,38 +145,29 @@ function ChillerStatusCard({ item }: { item: HomeChillerStatus }) {
 
 function UnifiedEvolutionChart({ data }: { data: any[] }) {
   return (
-    <section className="glass-card enterprise-chart-panel overflow-hidden p-5 shadow-[0_0_70px_oklch(0.78_0.2_220_/_0.10)]">
+    <section className="glass-card overflow-hidden p-5 shadow-[0_0_70px_oklch(0.78_0.2_220_/_0.10)]">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-xl font-bold">Evolução dos principais indicadores</h2>
           <p className="text-sm text-muted-foreground">Visão unificada do período selecionado</p>
         </div>
-        <div className="flex flex-wrap gap-1.5 text-[10px] text-muted-foreground">
-          <span className="rounded-full border border-primary/25 bg-primary/[0.06] px-2.5 py-1 font-semibold uppercase tracking-[0.1em] text-primary">Capacidade média (%)</span>
-          <span className="rounded-full border border-status-crit/25 bg-status-crit/[0.06] px-2.5 py-1 font-semibold uppercase tracking-[0.1em] text-status-crit">Delta T (°C)</span>
-          <span className="rounded-full border border-status-warn/25 bg-status-warn/[0.06] px-2.5 py-1 font-semibold uppercase tracking-[0.1em] text-status-warn">Temp. externa (°C)</span>
-          <span className="rounded-full border border-status-ok/25 bg-status-ok/[0.06] px-2.5 py-1 font-semibold uppercase tracking-[0.1em] text-status-ok">Cobertura (%)</span>
-        </div>
       </div>
-      <div className="h-[430px] w-full">
-        <ResponsiveContainer>
-          <LineChart data={data} margin={{ top: 15, right: 24, left: -8, bottom: 5 }}>
-            <CartesianGrid stroke={chartColors.grid} strokeOpacity={0.55} vertical />
-            <XAxis dataKey="x" stroke={chartColors.muted} fontSize={11} tickLine={false} axisLine={false} />
-            <YAxis yAxisId="pct" domain={[0, 100]} stroke={chartColors.muted} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
-            <YAxis yAxisId="temp" orientation="right" domain={[0, 45]} stroke={chartColors.muted} fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}°C`} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(value: any, name: any) => [value === null || value === undefined ? "--" : `${Number(value).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}${String(name).includes("Capacidade") || String(name).includes("Cobertura") ? "%" : "°C"}`, name]} />
-            <Line yAxisId="pct" type="monotone" dataKey="capacidade_media" stroke="#38bdf8" strokeWidth={7} strokeOpacity={0.16} dot={false} activeDot={false} legendType="none" />
-            <Line yAxisId="temp" type="monotone" dataKey="delta_t_medio" stroke="#fb2d5c" strokeWidth={7} strokeOpacity={0.14} dot={false} activeDot={false} legendType="none" />
-            <Line yAxisId="temp" type="monotone" dataKey="temperatura_externa" stroke="#facc15" strokeWidth={7} strokeOpacity={0.14} dot={false} activeDot={false} legendType="none" />
-            <Line yAxisId="pct" type="monotone" dataKey="cobertura_leituras" stroke="#22c55e" strokeWidth={5} strokeOpacity={0.12} dot={false} activeDot={false} legendType="none" />
-            <Line yAxisId="pct" type="monotone" dataKey="capacidade_media" name="Capacidade média utilizada" stroke="#38bdf8" strokeWidth={2.8} dot={false} activeDot={{ r: 5, strokeWidth: 2 }} />
-            <Line yAxisId="temp" type="monotone" dataKey="delta_t_medio" name="Delta T médio" stroke="#fb2d5c" strokeWidth={2.8} dot={false} activeDot={{ r: 5, strokeWidth: 2 }} />
-            <Line yAxisId="temp" type="monotone" dataKey="temperatura_externa" name="Temperatura externa" stroke="#facc15" strokeWidth={2.8} dot={false} activeDot={{ r: 5, strokeWidth: 2 }} />
-            <Line yAxisId="pct" type="monotone" dataKey="cobertura_leituras" name="Cobertura das leituras" stroke="#22c55e" strokeWidth={2.2} strokeDasharray="5 5" dot={false} activeDot={{ r: 5, strokeWidth: 2 }} />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
+      <EnterpriseLineChart
+        data={data}
+        height={430}
+        leftDomain={[0, 100]}
+        rightDomain={[0, 45]}
+        leftUnit="%"
+        rightUnit="°C"
+        showLegend
+        showFooterStats
+        series={[
+          { key: "capacidade_media", label: "Capacidade média", unit: "%", axis: "left", tone: "cyan", fill: true },
+          { key: "delta_t_medio", label: "Delta T", unit: "°C", axis: "right", tone: "pink", fill: true },
+          { key: "temperatura_externa", label: "Temp. externa", unit: "°C", axis: "right", tone: "yellow", fill: true },
+          { key: "cobertura_leituras", label: "Cobertura", unit: "%", axis: "left", tone: "green", dashed: true },
+        ]}
+      />
     </section>
   );
 }
