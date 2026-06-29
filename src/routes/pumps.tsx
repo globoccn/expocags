@@ -443,7 +443,7 @@ function PumpsPage() {
             ))}
           </div>
 
-          <div className="h-[275px] rounded-2xl border border-border/35 bg-background/20 p-4">
+          <div className="enterprise-chart-panel h-[275px] rounded-2xl border border-border/35 bg-background/20 p-4">
             <ResponsiveContainer width="100%" height="100%">
               <ReLineChart data={trendData} margin={{ top: 10, right: 18, bottom: 0, left: 0 }}>
                 <CartesianGrid stroke="rgba(148,163,184,0.12)" strokeDasharray="3 3" vertical={false} />
@@ -467,7 +467,7 @@ function PumpsPage() {
                     type="monotone"
                     dataKey={line.key}
                     stroke={line.color}
-                    strokeWidth={2}
+                    strokeWidth={2.8}
                     dot={false}
                     strokeDasharray={line.dashed ? "4 4" : undefined}
                     name={line.label}

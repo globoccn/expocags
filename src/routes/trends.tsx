@@ -180,7 +180,7 @@ function TrendsPage() {
         </div>
       </div>
 
-      <div className="glass-card p-5">
+      <div className="glass-card enterprise-chart-panel p-5">
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-display text-sm font-bold uppercase tracking-[0.12em]">{activeContext.title}</h2>
@@ -193,12 +193,12 @@ function TrendsPage() {
         <div className="h-[520px] w-full">
           <ResponsiveContainer>
             <LineChart data={data} margin={{ top: 10, right: 24, left: -8, bottom: 5 }}>
-              <CartesianGrid stroke={chartColors.grid} strokeOpacity={0.55} vertical />
+              <CartesianGrid stroke={chartColors.grid} strokeOpacity={0.5} vertical />
               <XAxis dataKey="t" stroke={chartColors.muted} fontSize={11} tickLine={false} axisLine={false} />
               <YAxis domain={activeContext.yDomain} ticks={activeContext.yTicks} stroke={chartColors.muted} fontSize={11} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={tooltipStyle} formatter={(value: any, name: any) => [value === null || value === undefined ? "--" : `${fmt(Number(value), activeContext.unit === "psi" ? 0 : 1)} ${activeContext.unit}`, name]} />
               {activeContext.lines.map((line) => (
-                <Line key={line.key} type="monotone" dataKey={line.key} name={line.label} stroke={line.color} strokeWidth={2} strokeDasharray={line.dashed ? "5 5" : undefined} dot={false} activeDot={{ r: 4 }} />
+                <Line key={line.key} type="monotone" dataKey={line.key} name={line.label} stroke={line.color} strokeWidth={line.dashed ? 2 : 2.8} strokeDasharray={line.dashed ? "5 5" : undefined} dot={false} activeDot={{ r: 5, strokeWidth: 2 }} />
               ))}
             </LineChart>
           </ResponsiveContainer>

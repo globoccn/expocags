@@ -333,7 +333,7 @@ function ChillersPage() {
               ))}
             </div>
           </div>
-          <div className="relative h-64 overflow-hidden rounded-2xl border border-border/30 bg-background/20 p-3">
+          <div className="enterprise-chart-panel relative h-64 overflow-hidden rounded-2xl border border-border/30 bg-background/20 p-3">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(56,189,248,0.10),transparent_55%)]" />
             <ResponsiveContainer width="100%" height="100%">
               <ReLineChart data={trendData} margin={{ left: -10, right: 10, top: 8, bottom: 0 }}>
@@ -372,10 +372,10 @@ function ChillersPage() {
                     dataKey={line.key}
                     name={line.label}
                     stroke={line.color}
-                    strokeWidth={2.4}
+                    strokeWidth={3}
                     strokeDasharray={line.dashed ? "5 5" : undefined}
                     dot={false}
-                    activeDot={{ r: 4, strokeWidth: 0 }}
+                    activeDot={{ r: 5, strokeWidth: 2 }}
                   />
                 ))}
               </ReLineChart>

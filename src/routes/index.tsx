@@ -132,10 +132,10 @@ function ChillerStatusCard({ item }: { item: HomeChillerStatus }) {
         </div>
         <StatusPill tone={item.tone}>{item.status}</StatusPill>
       </div>
-      <div className="relative mt-5 h-40 overflow-visible rounded-xl border border-border/35 bg-black/20">
+      <div className="relative mt-5 h-44 overflow-visible rounded-xl border border-border/35 bg-black/20">
         <div className="absolute inset-0 rounded-xl opacity-70" style={{ background: `radial-gradient(circle at 50% 52%, ${color.replace(")", " / 0.34)")}, transparent 72%)` }} />
-        <div className="absolute inset-x-3 bottom-4 h-7 rounded-[50%] bg-black/35 blur-sm" />
-        <img src={image} alt={item.name} className="absolute left-1/2 top-1/2 z-10 h-[150px] w-[112%] max-w-none -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.62)] transition-transform duration-500 group-hover:scale-[1.04]" />
+        <div className="absolute inset-x-3 bottom-3 h-8 rounded-[50%] bg-black/35 blur-sm" />
+        <img src={image} alt={item.name} className="absolute left-1/2 top-1/2 z-10 h-[190px] w-[132%] max-w-none -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.62)] transition-transform duration-500 group-hover:scale-[1.04]" />
       </div>
       <div className="relative mt-5 grid grid-cols-3 gap-3 border-t border-border/35 pt-4 text-xs">
         <div><span className="text-muted-foreground">Capacidade média</span><strong className="mt-1 block text-xl text-foreground">{item.capacity}</strong></div>
@@ -148,7 +148,7 @@ function ChillerStatusCard({ item }: { item: HomeChillerStatus }) {
 
 function UnifiedEvolutionChart({ data }: { data: any[] }) {
   return (
-    <section className="glass-card overflow-hidden p-5 shadow-[0_0_60px_oklch(0.78_0.2_220_/_0.08)]">
+    <section className="glass-card enterprise-chart-panel overflow-hidden p-5 shadow-[0_0_70px_oklch(0.78_0.2_220_/_0.10)]">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-display text-xl font-bold">Evolução dos principais indicadores</h2>

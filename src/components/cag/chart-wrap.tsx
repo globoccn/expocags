@@ -18,7 +18,7 @@ export function ChartWrap({
   className?: string;
 }) {
   return (
-    <div className={cn("glass-card p-4", className)}>
+    <div className={cn("glass-card enterprise-chart-panel p-4", className)}>
       <div className="mb-3 flex items-start justify-between">
         <div>
           <h4 className="font-display text-sm font-semibold">{title}</h4>
@@ -50,8 +50,9 @@ export const chartColors = {
 export const tooltipStyle: any = {
   backgroundColor: "var(--popover)",
   border: "1px solid var(--glass-border)",
-  borderRadius: 8,
+  borderRadius: 14,
   fontSize: 12,
   color: "var(--foreground)",
-  boxShadow: "0 8px 24px oklch(0 0 0 / 0.3)",
+  boxShadow: "0 20px 70px oklch(0 0 0 / 0.48), 0 0 28px oklch(0.78 0.2 220 / 0.12)",
+  backdropFilter: "blur(18px) saturate(150%)",
 };
