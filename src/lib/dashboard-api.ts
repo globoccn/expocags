@@ -157,6 +157,8 @@ export function toLegacyChiller(c: any, b?: any) {
     oilPressureC2: asNum(src?.pressao_oleo_cp2_avg),
     compressor1Status: stateToStatus(src?.compressor_1_atual),
     compressor2Status: stateToStatus(src?.compressor_2_atual),
+    compressor1Hours: asNum(src?.compressor_1_horas_ligado),
+    compressor2Hours: asNum(src?.compressor_2_horas_ligado),
     healthScore: c?.status === "normal" ? 90 : 72,
     anomalies: Array.isArray(c?.issues) ? c.issues.length : 0,
   });
@@ -266,11 +268,11 @@ export function homePageData(payload: ApiPayload, period: UiPeriod, icons: any) 
   };
   return {
     kpis: [
-      mk("chillers_operando", icons.CircuitBoard, "info", "Chillers operando"),
-      mk("bombas_operando", icons.Droplets, "ok", "Bombas operando"),
+      mk("chillers_operando", icons.CircuitBoard, "info", "Chillers que operaram"),
+      mk("capacidade_utilizada", icons.Droplets, "ok", "Capacidade média utilizada"),
       mk("equipamentos_atencao", icons.AlertTriangle, "warn", "Equipamentos em atenção"),
-      mk("alarmes", icons.Bell, "crit", "Alarmes ativos"),
-      mk("cobertura_dados", icons.LineChart, "ai", "Disponibilidade dos dados"),
+      mk("alarmes", icons.Bell, "crit", "Alarmes registrados"),
+      mk("cobertura_dados", icons.LineChart, "ai", "Cobertura das leituras"),
     ],
     occurrences: occ.slice(0, 3).map((o: any) => ({
       title: o.titulo || o.title || field(o.sintoma, "Sem ocorrências relevantes"),

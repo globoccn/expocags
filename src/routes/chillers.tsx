@@ -1,10 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ArrowRight,
-  CalendarDays,
   CheckCircle2,
-  ChevronDown,
-  Download,
   Info,
   Thermometer,
   Waves,
@@ -23,7 +20,7 @@ import chillerBlue from "@/assets/chiller-blue.png";
 import chillerRed from "@/assets/chiller-red.png";
 import chillerWhite from "@/assets/chiller-white.png";
 import { chillerTheme, type ChillerData, type ChillerId } from "@/data/mockCagData";
-import { legacyChillers, useDashboard, text, textInt } from "@/lib/dashboard-api";
+import { labelForPeriod, legacyChillers, useDashboard, text, textInt } from "@/lib/dashboard-api";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/chillers")({
@@ -91,8 +88,8 @@ function circuitSummary(chiller: ChillerData, circuitId: "A" | "B") {
     discharge: textInt(circuit.highPressure, " psi"),
     oil: hasAttention ? "Atenção" : "Normal",
     fans: "4/4",
-    compressor1: circuit.compressor1Status === "on" ? "Operando" : "Standby",
-    compressor2: hasAttention ? "Atenção" : circuit.compressor2Status === "on" ? "Operando" : "Standby",
+    compressor1: text((circuit as any).compressor1Hours, " h", 1),
+    compressor2: text((circuit as any).compressor2Hours, " h", 1),
     hasAttention,
   };
 }
@@ -203,7 +200,7 @@ function ChillersPage() {
   const [trendContext, setTrendContext] = useState<TrendContext>("water");
   const chillers = legacyChillers(payload) as ChillerData[];
   const active = chillers.find((c) => c.id === activeId) || chillers[0];
-  const selectedPeriod = periodOptions.find((p) => p.key === period) || periodOptions[0];
+  const selectedPeriod = labelForPeriod(payload, period);
   const status = chillerStatus(active);
   const trendData = useMemo(() => buildTrendData(active, period), [active, period]);
   const activeTrend = trendContexts[trendContext];
@@ -217,34 +214,7 @@ function ChillersPage() {
           <h1 className="font-display text-3xl font-bold tracking-tight">Chillers</h1>
           <p className="mt-1 text-sm text-muted-foreground">Resumo operacional dos grupos de água gelada</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-surface-2/55 px-3 py-2 text-xs text-muted-foreground">
-            <span className="grid h-8 w-8 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
-              <CalendarDays className="h-4 w-4" />
-            </span>
-            <span>
-              <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Atualização dos dados</span>
-              <span className="font-semibold text-foreground">Diariamente às 07:00</span>
-            </span>
-          </div>
-          <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-surface-2/55 px-3 py-2 text-xs">
-            <span className="text-muted-foreground">Período analisado</span>
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as PeriodKey)}
-              className="rounded-lg border border-border/50 bg-background/65 px-3 py-1.5 font-semibold text-foreground outline-none"
-            >
-              {periodOptions.map((p) => (
-                <option key={p.key} value={p.key}>{p.label} · {p.date}</option>
-              ))}
-            </select>
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <button className="inline-flex items-center gap-2 rounded-xl border border-status-ai/45 bg-status-ai/10 px-4 py-2 text-sm font-semibold text-status-ai transition hover:bg-status-ai/15">
-            <Download className="h-4 w-4" />
-            Exportar relatório
-          </button>
-        </div>
+
       </section>
 
       <section className="glass-card p-2">
@@ -282,7 +252,7 @@ function ChillersPage() {
             <div className="min-w-0 flex-1">
               <div className="mb-3 flex items-center justify-between gap-2">
                 <div>
-                  <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Status geral</div>
+                  <div className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Resumo do período</div>
                   <h2 className={cn("font-display text-xl font-bold", color.text)}>{active.name}</h2>
                 </div>
                 <StatusPill tone={status.tone}>{status.label}</StatusPill>
@@ -296,7 +266,7 @@ function ChillersPage() {
               </div>
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                 <Metric label="Horas de operação" value={text(active.operatingHours === null || active.operatingHours === undefined ? null : active.operatingHours / 1000, " h", 1)} />
-                <Metric label="Última atualização" value="19/06/2026 06:55" />
+                <Metric label="Data analisada" value={selectedPeriod.date} />
               </div>
             </div>
           </div>
@@ -414,11 +384,6 @@ function ChillersPage() {
         </div>
 
       </section>
-
-      <div className="glass-card flex items-center gap-3 px-5 py-3 text-xs text-muted-foreground">
-        <Info className="h-4 w-4 text-primary" />
-        <span>Os dados apresentados são baseados no período selecionado: {selectedPeriod.label} ({selectedPeriod.date}).</span>
-      </div>
     </div>
   );
 }
@@ -482,7 +447,7 @@ function CircuitCard({ chiller, circuitId }: { chiller: ChillerData; circuitId: 
     <div className={cn("glass-card border p-5", circuit.hasAttention ? "border-status-warn/45" : "border-primary/35")}>
       <div className="mb-5 flex items-center justify-between">
         <h3 className="font-display text-lg font-bold uppercase text-primary">{circuit.title}</h3>
-        <StatusPill tone={circuit.hasAttention ? "warn" : "ok"}>{circuit.hasAttention ? "Atenção" : "Operando"}</StatusPill>
+        <StatusPill tone={circuit.hasAttention ? "warn" : "ok"}>{circuit.hasAttention ? "Atenção" : "Operou no período"}</StatusPill>
       </div>
       <div className="grid gap-3 md:grid-cols-5">
         <div className="md:col-span-1">

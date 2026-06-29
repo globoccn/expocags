@@ -151,7 +151,7 @@ function buildTrendRows(payload: any, context: ContextKey, group: GroupKey) {
       pressaoLinha: avgLocal("linha"),
       setpointPressao: avgLocal("setpoint"),
       bypass: avgLocal("abertura"),
-      bombasOperando: avgLocal("bag1"),
+      bombasComOperacao: avgLocal("bag1"),
     };
   });
 }
@@ -179,7 +179,7 @@ const trendLines: Record<ContextKey, Array<{ key: string; label: string; color: 
     { key: "pressaoLinha", label: "Pressão linha (escala)", color: "#fb2d5c" },
     { key: "setpointPressao", label: "Setpoint pressão", color: "#e5e7eb", dashed: true },
     { key: "bypass", label: "Bypass (%)", color: "#facc15" },
-    { key: "bombasOperando", label: "Bombas operando (%)", color: "#22c55e" },
+    { key: "bombasComOperacao", label: "Bombas com operação (%)", color: "#22c55e" },
   ],
 };
 

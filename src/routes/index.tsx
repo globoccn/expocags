@@ -366,13 +366,6 @@ function Index() {
           </Link>
         </aside>
       </section>
-
-      <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <InfoFooter icon={CalendarDays} label="Período analisado" value={cfg.date} detail={`Base comparativa: ${cfg.short}`} />
-        <InfoFooter icon={LineChart} label="Cobertura das leituras" value={data.kpis[4]?.value || "--"} detail={period === "d1" ? "+2 pp vs ontem" : `comparado ao período anterior`} />
-        <InfoFooter icon={Database} label="Dados coletados" value={data.kpis[4]?.value || "--"} detail="Qualidade dos dados" />
-        <InfoFooter icon={Clock3} label="Atualização dos dados" value="07:00" detail="Diariamente pela manhã" />
-      </section>
     </div>
   );
 }

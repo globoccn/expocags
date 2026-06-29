@@ -24,13 +24,13 @@ export const Route = createFileRoute("/alarms")({
 
 type Severity = "all" | "critico" | "atencao" | "info";
 type Origin = "all" | "chillers" | "bombas";
-type AlarmStatus = "ativo" | "resolvido";
+type AlarmStatus = "registrado" | "resolvido";
 
 const severityOptions: Array<{ key: Severity; label: string }> = [
   { key: "all", label: "Todos" },
   { key: "critico", label: "Críticos" },
   { key: "atencao", label: "Atenção" },
-  { key: "info", label: "Informativos" },
+  { key: "info", label: "Informregistrados" },
 ];
 
 const originOptions: Array<{ key: Origin; label: string; icon: typeof Snowflake }> = [
@@ -48,7 +48,7 @@ function buildAlarmEvents(payload: any) {
     equipment: e.equipment || "--",
     origin: String(e.source || "").toLowerCase().includes("bomba") ? "bombas" as Origin : "chillers" as Origin,
     severity: String(e.severity || "").toLowerCase().includes("crit") ? "critico" as Exclude<Severity, "all"> : String(e.severity || "").toLowerCase().includes("aten") ? "atencao" as Exclude<Severity, "all"> : "info" as Exclude<Severity, "all">,
-    status: "ativo" as AlarmStatus,
+    status: "registrado" as AlarmStatus,
     details: e.detail || e.status || "Registrado",
   }));
 }
@@ -97,7 +97,7 @@ const severityTone = {
     icon: Bell,
   },
   info: {
-    label: "Informativo",
+    label: "Informregistrado",
     text: "text-status-info",
     border: "border-status-info/40",
     bg: "bg-status-info/10",
@@ -210,7 +210,7 @@ function AlarmsPage() {
       </div>
 
       <div className="grid gap-3 xl:grid-cols-6 md:grid-cols-3 sm:grid-cols-2">
-        <KpiCard icon={Bell} title="Alarmes ativos" value={String(payload?.alarmes?.summary?.ativos ?? "--")} subtitle="Período selecionado" tone="critico" />
+        <KpiCard icon={Bell} title="Alarmes registrados" value={String(payload?.alarmes?.summary?.registrados ?? "--")} subtitle="Período selecionado" tone="critico" />
         <KpiCard icon={AlertTriangle} title="Críticos" value={String(payload?.alarmes?.summary?.criticos ?? "--")} subtitle="Período selecionado" tone="critico" />
         <KpiCard icon={XCircle} title="Em atenção" value={String(payload?.alarmes?.summary?.atencao ?? "--")} subtitle="Período selecionado" tone="atencao" />
         <KpiCard icon={CheckCircle2} title="Resolvidos" value={String(payload?.alarmes?.summary?.resolvidos ?? "--")} subtitle="Período selecionado" tone="ok" />
@@ -320,7 +320,7 @@ function AlarmsPage() {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <section className="glass-card p-4">
-              <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.12em]">Alarmes por equipamento <span className="text-muted-foreground">(ativos)</span></h2>
+              <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.12em]">Alarmes por equipamento <span className="text-muted-foreground">(registrados)</span></h2>
               <div className="space-y-3">
                 {equipmentAlarms.map((item) => {
                   const Icon = item.icon;
