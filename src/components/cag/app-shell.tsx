@@ -1,6 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  AlertTriangle,
   BarChart3,
   CalendarDays,
   Brain,
@@ -20,9 +19,8 @@ const nav = [
   { to: "/", label: "Visão Geral", icon: LayoutDashboard },
   { to: "/chillers", label: "Chillers", icon: CircuitBoard },
   { to: "/pumps", label: "Bombas", icon: Droplets },
-  { to: "/ai", label: "Análise IA", icon: Brain },
+  { to: "/ai", label: "Assistente IA", icon: Brain },
   { to: "/trends", label: "Tendências", icon: BarChart3 },
-  { to: "/alarms", label: "Alarmes", icon: AlertTriangle },
   { to: "/reports", label: "Relatórios Hidrômetros", icon: FileText },
   { to: "/settings", label: "Configurações", icon: Settings },
 ] as const;

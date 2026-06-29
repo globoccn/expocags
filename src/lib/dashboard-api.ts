@@ -245,20 +245,19 @@ export function field(value: any, fallback = dash) {
   return value === null || value === undefined || value === "" ? fallback : value;
 }
 
+
 export function homePageData(payload: ApiPayload, period: UiPeriod, icons: any) {
   const cards = payload?.home?.cards || [];
   const cardBy = (id: string) => cards.find((c: any) => c.id === id) || {};
-  const occ = payload?.home?.ocorrencias_dia || payload?.alarmes?.timeline || [];
-  const rec = payload?.home?.acoes_recomendadas || payload?.alarmes?.recomendacoes_operacionais || [];
   const chillers = getChillers(payload);
-  const statusChillers = payload?.home?.status_chillers || chillers;
+  const statusChillers = payload?.home?.status_chillers || payload?.home?.comparativo_chillers || chillers;
   const toneFromStatus = (s: any) => statusTone(s) === "ok" ? "ok" : statusTone(s) === "crit" ? "crit" : "warn";
-  const mk = (id: string, icon: any, tone: any, fallbackLabel: string) => {
+  const mk = (id: string, icon: any, tone: any, fallbackLabel: string, fallbackDetail = "") => {
     const c = cardBy(id);
     return {
       label: c.label || fallbackLabel,
       value: field(c.value),
-      detail: c.detail || "",
+      detail: c.detail || fallbackDetail,
       previous: c.previous || "",
       delta: c.delta || "",
       deltaTone: c.deltaTone || "neutral",
@@ -269,20 +268,11 @@ export function homePageData(payload: ApiPayload, period: UiPeriod, icons: any) 
   return {
     kpis: [
       mk("chillers_operando", icons.CircuitBoard, "info", "Chillers que operaram"),
-      mk("capacidade_utilizada", icons.Droplets, "ok", "Capacidade média utilizada"),
+      mk("capacidade_utilizada", icons.Gauge, "info", "Capacidade média utilizada"),
       mk("equipamentos_atencao", icons.AlertTriangle, "warn", "Equipamentos em atenção"),
-      mk("alarmes", icons.Bell, "crit", "Alarmes registrados"),
-      mk("cobertura_dados", icons.LineChart, "ai", "Cobertura das leituras"),
+      mk("condicao_climatica", icons.ThermometerSun, "ok", "Condição climática"),
+      mk("delta_t_medio", icons.Droplets, "ai", "Delta T médio da central"),
     ],
-    occurrences: occ.slice(0, 3).map((o: any) => ({
-      title: o.titulo || o.title || field(o.sintoma, "Sem ocorrências relevantes"),
-      desc: o.detalhe || o.detail || o.desc || "",
-      time: o.time || "--",
-      level: String(o.severidade || o.severity || "Info").toLowerCase().includes("crit") ? "Crítico" : String(o.severidade || o.severity || "").toLowerCase().includes("aten") ? "Atenção" : "Info",
-      tone: statusTone(o.severidade || o.severity),
-      icon: icons.ThermometerSun,
-    })),
-    recommendations: rec.slice(0, 3).map((r: any) => typeof r === "string" ? { title: r, desc: "" } : { title: r.title || r.titulo || field(r), desc: r.desc || r.subtitle || r.detalhe || "" }),
     chillers: statusChillers.slice(0, 3).map((c: any) => {
       const id = apiIdToUi[c.id] || "blue";
       const full = chillerByUi(payload, id) || c;
@@ -292,12 +282,15 @@ export function homePageData(payload: ApiPayload, period: UiPeriod, icons: any) 
         status: (c.status_label || full.status_label || c.status || full.status || "--").toString().toLowerCase().includes("normal") ? "Normal" : "Atenção",
         hours: text(full.tempo_ligado_horas, " h", 1),
         deltaT: text(c.delta_t ?? full.delta_t?.avg, "°C", 1),
-        setpoint: textInt(full.setpoint?.atingido_pct ?? full.ui?.cards?.find?.((card: any) => card.id === "setpoint_atingido")?.raw_value, "%"),
+        capacity: textInt(c.capacidade ?? full.capacidade?.avg, "%"),
+        setpoint: textInt(c.setpoint_atingido ?? full.setpoint?.atingido_pct ?? full.ui?.cards?.find?.((card: any) => card.id === "setpoint_atingido")?.raw_value, "%"),
         compare: "",
         note: c.principal_ocorrencia || full.principal_ocorrencia || "Sem ocorrências relevantes",
         tone: toneFromStatus(c.status || full.status),
       };
     }),
-    summary: payload?.assistente_ia?.resumo_periodo?.principais_ocorrencias?.join(". ") || payload?.tendencias?.resumo_automatico_periodo?.join(" ") || "Sem ocorrências relevantes no período selecionado.",
+    evolution: Array.isArray(payload?.home?.evolucao_principal?.series) ? payload.home.evolucao_principal.series : [],
+    evolutionMeta: payload?.home?.evolucao_principal || {},
+    summary: payload?.home?.resumo_executivo || payload?.tendencias?.resumo_automatico_periodo?.join(" ") || "Período consolidado sem resumo disponível.",
   };
 }
