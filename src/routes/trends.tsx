@@ -125,10 +125,10 @@ function buildRows(payload: any, context: ContextKey, group: GroupKey) {
   const max = Math.max(0, ...seriesLists.map((s: any[]) => s.length));
   return Array.from({ length: max }, (_, index) => {
     const rows = seriesLists.map((list: any[]) => list[index] || {});
-    const out: Record<string, any> = { t: rows.find((r) => r.x || r.date || r.timestamp)?.x || rows.find((r) => r.date)?.date || "--" };
+    const out: Record<string, any> = { t: rows.find((r: any) => r.x || r.date || r.timestamp)?.x || rows.find((r: any) => r.date)?.date || "--" };
     for (const line of cfg.lines) {
-      const vals = rows.map((r) => asNum(r[line.key])).filter((v): v is number => v !== null);
-      out[line.key] = vals.length ? Number((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2)) : null;
+      const vals = rows.map((r: any) => asNum(r[line.key])).filter((v: any): v is number => v !== null);
+      out[line.key] = vals.length ? Number((vals.reduce((a: number, b: number) => a + b, 0) / vals.length).toFixed(2)) : null;
     }
     return out;
   });

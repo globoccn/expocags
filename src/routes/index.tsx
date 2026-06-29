@@ -54,11 +54,11 @@ const periodConfig: Record<PeriodKey, { comparison: string }> = {
 };
 
 const toneClasses: Record<Tone, { text: string; border: string; bg: string; glow: string; soft: string }> = {
-  info: { text: "text-primary", border: "border-primary/35", bg: "bg-primary/10", glow: "shadow-[0_0_34px_rgba(0,180,255,0.16)]", soft: "from-primary/22" },
-  ok: { text: "text-status-ok", border: "border-status-ok/35", bg: "bg-status-ok/10", glow: "shadow-[0_0_34px_oklch(0.82_0.22_150_/_0.12)]", soft: "from-status-ok/18" },
-  warn: { text: "text-status-warn", border: "border-status-warn/35", bg: "bg-status-warn/10", glow: "shadow-[0_0_34px_oklch(0.88_0.2_95_/_0.12)]", soft: "from-status-warn/20" },
-  crit: { text: "text-status-crit", border: "border-status-crit/35", bg: "bg-status-crit/10", glow: "shadow-[0_0_34px_oklch(0.7_0.28_22_/_0.12)]", soft: "from-status-crit/18" },
-  ai: { text: "text-status-ai", border: "border-status-ai/40", bg: "bg-status-ai/10", glow: "shadow-[0_0_40px_oklch(0.75_0.24_300_/_0.16)]", soft: "from-status-ai/22" },
+  info: { text: "text-primary", border: "border-primary/20", bg: "bg-primary/[0.06]", glow: "shadow-[0_0_50px_-12px_rgba(0,180,255,0.25)]", soft: "from-primary/[0.08]" },
+  ok: { text: "text-status-ok", border: "border-status-ok/20", bg: "bg-status-ok/[0.06]", glow: "shadow-[0_0_50px_-12px_oklch(0.82_0.22_150_/_0.22)]", soft: "from-status-ok/[0.07]" },
+  warn: { text: "text-status-warn", border: "border-status-warn/22", bg: "bg-status-warn/[0.06]", glow: "shadow-[0_0_50px_-12px_oklch(0.88_0.2_95_/_0.22)]", soft: "from-status-warn/[0.07]" },
+  crit: { text: "text-status-crit", border: "border-status-crit/22", bg: "bg-status-crit/[0.06]", glow: "shadow-[0_0_50px_-12px_oklch(0.7_0.28_22_/_0.22)]", soft: "from-status-crit/[0.07]" },
+  ai: { text: "text-status-ai", border: "border-status-ai/25", bg: "bg-status-ai/[0.07]", glow: "shadow-[0_0_55px_-12px_oklch(0.75_0.24_300_/_0.28)]", soft: "from-status-ai/[0.08]" },
 };
 
 const chillerAccent = {
@@ -73,12 +73,12 @@ function Delta({ tone, value }: { tone: "up" | "down" | "neutral"; value: string
   const clean = value && value !== "--";
   const classes = tone === "up" ? "text-status-ok" : tone === "down" ? "text-status-warn" : "text-muted-foreground";
   const symbol = tone === "up" ? "↗" : tone === "down" ? "↘" : "—";
-  return <span className={cn("font-mono font-semibold", classes)}>{clean ? `${symbol} ${value}` : "—"}</span>;
+  return <span className={cn("font-mono text-[11px] font-semibold tabular-nums", classes)}>{clean ? `${symbol} ${value}` : "—"}</span>;
 }
 
 function StatusPill({ tone, children }: { tone: Tone; children: ReactNode }) {
   const t = toneClasses[tone];
-  return <span className={cn("inline-flex items-center rounded-full border px-2 py-1 text-[10px] font-bold", t.border, t.bg, t.text)}>{children}</span>;
+  return <span className={cn("inline-flex items-center rounded-full border px-2 py-[3px] text-[9px] font-bold uppercase tracking-[0.14em]", t.border, t.bg, t.text)}>{children}</span>;
 }
 
 function KpiCard({ item }: { item: HomeKpi }) {
@@ -86,32 +86,30 @@ function KpiCard({ item }: { item: HomeKpi }) {
   const t = toneClasses[item.tone];
   const spark = Array.isArray(item.sparkline) ? item.sparkline.filter((p) => Number.isFinite(Number(p?.v))) : [];
   return (
-    <article className={cn("glass-card group relative min-h-[162px] overflow-hidden p-4 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.01]", t.border, t.glow)}>
-      <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br to-transparent opacity-75", t.soft)} />
-      <div className="pointer-events-none absolute -right-14 -top-14 h-36 w-36 rounded-full bg-current opacity-[0.10] blur-3xl" />
-      <div className="pointer-events-none absolute inset-x-4 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+    <article className={cn("glass-card group relative min-h-[170px] overflow-hidden p-4 transition-all duration-300 hover:-translate-y-0.5", t.border, t.glow)}>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
       <div className="relative flex h-full flex-col">
         <div className="flex items-start justify-between gap-3">
-          <div className={cn("grid h-12 w-12 shrink-0 place-items-center rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]", t.border, t.bg, t.text)}>
-            <Icon className="h-6 w-6 drop-shadow-[0_0_10px_currentColor]" />
+          <div className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-lg border", t.border, t.bg, t.text)}>
+            <Icon className="h-[18px] w-[18px]" />
           </div>
-          <div className={cn("rounded-full border px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em]", t.border, t.bg, t.text)}>
+          <div className={cn("rounded-full border px-2 py-[3px] text-[8.5px] font-bold uppercase tracking-[0.18em]", t.border, t.bg, t.text)}>
             Consolidado
           </div>
         </div>
         <div className="mt-3 min-w-0 flex-1">
-          <div className={cn("text-[10px] font-bold uppercase tracking-[0.16em]", t.text)}>{item.label}</div>
-          <div className="mt-2 flex items-end gap-2">
-            <span className="font-display text-4xl font-bold leading-none tracking-tight tabular-nums">{item.value}</span>
-            <span className="mb-1 text-sm text-muted-foreground">{item.detail}</span>
+          <div className={cn("text-[10px] font-semibold uppercase tracking-[0.18em]", t.text)}>{item.label}</div>
+          <div className="mt-1.5 flex items-end gap-2">
+            <span className="font-display text-[34px] font-bold leading-none tracking-tight tabular-nums text-foreground">{item.value}</span>
+            <span className="mb-1 text-[11px] text-muted-foreground">{item.detail}</span>
           </div>
-          <div className="mt-3 grid grid-cols-[1fr_auto] items-center gap-3 border-t border-border/35 pt-2 text-[11px] text-muted-foreground">
+          <div className="mt-2 flex items-center justify-between gap-3 text-[10.5px] uppercase tracking-[0.1em] text-muted-foreground">
             <span className="truncate">{item.previous || "Período anterior"}</span>
             <Delta tone={item.deltaTone} value={item.delta} />
           </div>
         </div>
-        <div className="-mx-1 mt-2 h-[34px] opacity-95">
-          {spark.length ? <Sparkline data={spark} tone={item.tone} height={34} /> : <div className="h-full rounded-lg border border-border/25 bg-black/10" />}
+        <div className="-mx-1 mt-1.5 h-[40px] opacity-95">
+          {spark.length ? <Sparkline data={spark} tone={item.tone} height={40} /> : <div className="h-full rounded-md border border-border/15" />}
         </div>
       </div>
     </article>
@@ -123,24 +121,24 @@ function ChillerStatusCard({ item }: { item: HomeChillerStatus }) {
   const image = chillerImages[item.id];
   const isWarn = item.tone === "warn";
   return (
-    <Link to="/chillers/$id" params={{ id: item.id }} className="glass-card group relative min-h-[300px] overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.005] hover:border-primary/50">
-      <div className="pointer-events-none absolute inset-0 opacity-60" style={{ background: `radial-gradient(circle at 18% 38%, ${color.replace(")", " / 0.26)")}, transparent 36%)` }} />
+    <Link to="/chillers/$id" params={{ id: item.id }} className="glass-card group relative min-h-[300px] overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40">
+      <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: `radial-gradient(circle at 18% 30%, ${color.replace(")", " / 0.12)")}, transparent 45%)` }} />
       <div className="relative flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full" style={{ background: color }} />
-          <div className="font-display text-sm font-bold uppercase tracking-wide">{item.name}</div>
+          <span className="h-2 w-2 rounded-full" style={{ background: color, boxShadow: `0 0 10px ${color}` }} />
+          <div className="font-display text-[12px] font-bold uppercase tracking-[0.16em] text-foreground/90">{item.name}</div>
         </div>
         <StatusPill tone={item.tone}>{item.status}</StatusPill>
       </div>
-      <div className="relative mt-5 h-44 overflow-visible rounded-xl border border-border/35 bg-black/20">
-        <div className="absolute inset-0 rounded-xl opacity-70" style={{ background: `radial-gradient(circle at 50% 52%, ${color.replace(")", " / 0.34)")}, transparent 72%)` }} />
-        <div className="absolute inset-x-3 bottom-3 h-8 rounded-[50%] bg-black/35 blur-sm" />
-        <img src={image} alt={item.name} className="absolute left-1/2 top-1/2 z-10 h-[190px] w-[132%] max-w-none -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_16px_24px_rgba(0,0,0,0.62)] transition-transform duration-500 group-hover:scale-[1.04]" />
+      <div className="relative mt-5 h-44 overflow-visible rounded-xl border border-border/20 bg-black/15">
+        <div className="absolute inset-0 rounded-xl opacity-55" style={{ background: `radial-gradient(circle at 50% 55%, ${color.replace(")", " / 0.22)")}, transparent 70%)` }} />
+        <div className="absolute inset-x-3 bottom-3 h-8 rounded-[50%] bg-black/40 blur-md" />
+        <img src={image} alt={item.name} className="absolute left-1/2 top-1/2 z-10 h-[190px] w-[132%] max-w-none -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.65)] transition-transform duration-500 group-hover:scale-[1.04]" />
       </div>
-      <div className="relative mt-5 grid grid-cols-3 gap-3 border-t border-border/35 pt-4 text-xs">
-        <div><span className="text-muted-foreground">Capacidade média</span><strong className="mt-1 block text-xl text-foreground">{item.capacity}</strong></div>
-        <div><span className="text-muted-foreground">Delta T médio</span><strong className={cn("mt-1 block text-xl", isWarn ? "text-status-crit" : "text-foreground")}>{item.deltaT}</strong></div>
-        <div><span className="text-muted-foreground">Setpoint atingido</span><strong className={cn("mt-1 block text-xl", isWarn ? "text-status-crit" : "text-foreground")}>{item.setpoint}</strong></div>
+      <div className="relative mt-5 grid grid-cols-3 gap-3 border-t border-border/25 pt-4">
+        <div><span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Capacidade</span><strong className="mt-1 block font-display text-xl font-bold tabular-nums text-foreground">{item.capacity}</strong></div>
+        <div><span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Delta T</span><strong className={cn("mt-1 block font-display text-xl font-bold tabular-nums", isWarn ? "text-status-crit" : "text-foreground")}>{item.deltaT}</strong></div>
+        <div><span className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">Setpoint</span><strong className={cn("mt-1 block font-display text-xl font-bold tabular-nums", isWarn ? "text-status-crit" : "text-foreground")}>{item.setpoint}</strong></div>
       </div>
     </Link>
   );
@@ -154,11 +152,11 @@ function UnifiedEvolutionChart({ data }: { data: any[] }) {
           <h2 className="font-display text-xl font-bold">Evolução dos principais indicadores</h2>
           <p className="text-sm text-muted-foreground">Visão unificada do período selecionado</p>
         </div>
-        <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-          <span className="rounded-full border border-primary/35 bg-primary/10 px-3 py-1.5 text-primary">Capacidade média utilizada (%)</span>
-          <span className="rounded-full border border-status-crit/35 bg-status-crit/10 px-3 py-1.5 text-status-crit">Delta T médio (°C)</span>
-          <span className="rounded-full border border-status-warn/35 bg-status-warn/10 px-3 py-1.5 text-status-warn">Temperatura externa (°C)</span>
-          <span className="rounded-full border border-status-ok/35 bg-status-ok/10 px-3 py-1.5 text-status-ok">Cobertura das leituras (%)</span>
+        <div className="flex flex-wrap gap-1.5 text-[10px] text-muted-foreground">
+          <span className="rounded-full border border-primary/25 bg-primary/[0.06] px-2.5 py-1 font-semibold uppercase tracking-[0.1em] text-primary">Capacidade média (%)</span>
+          <span className="rounded-full border border-status-crit/25 bg-status-crit/[0.06] px-2.5 py-1 font-semibold uppercase tracking-[0.1em] text-status-crit">Delta T (°C)</span>
+          <span className="rounded-full border border-status-warn/25 bg-status-warn/[0.06] px-2.5 py-1 font-semibold uppercase tracking-[0.1em] text-status-warn">Temp. externa (°C)</span>
+          <span className="rounded-full border border-status-ok/25 bg-status-ok/[0.06] px-2.5 py-1 font-semibold uppercase tracking-[0.1em] text-status-ok">Cobertura (%)</span>
         </div>
       </div>
       <div className="h-[430px] w-full">
@@ -214,7 +212,7 @@ function Index() {
           </Link>
         </div>
         <div className="grid gap-3 lg:grid-cols-3">
-          {data.chillers.map((item) => <ChillerStatusCard key={item.id} item={item} />)}
+          {data.chillers.map((item: any) => <ChillerStatusCard key={item.id} item={item} />)}
         </div>
       </section>
 

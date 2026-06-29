@@ -107,17 +107,17 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Header */}
-        <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-border/40 bg-background/70 px-4 backdrop-blur-xl">
-          <div className="hidden md:block">
-            <div className="font-display text-sm font-semibold leading-none">
+        <header className="sticky top-0 z-30 flex h-[68px] items-center gap-3 border-b border-border/40 bg-background/70 px-5 backdrop-blur-xl">
+          <div className="hidden min-w-0 md:block">
+            <div className="font-display text-[19px] font-bold uppercase leading-none tracking-[0.04em] text-foreground">
               Visão Geral da Central
             </div>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+            <div className="mt-1.5 text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
               Expo Center Norte · Análise Operacional
             </div>
           </div>
-          <div className="ml-auto flex items-center gap-3">
-            <div className="hidden overflow-hidden rounded-full border border-border bg-surface-2/70 p-0.5 text-[11px] shadow-[inset_0_0_18px_rgba(0,180,255,0.06)] md:flex">
+          <div className="ml-auto flex items-center gap-2.5">
+            <div className="hidden overflow-hidden rounded-full border border-border/60 bg-surface-2/50 p-0.5 text-[11px] md:flex">
               {[
                 { value: "d1", label: "D-1" },
                 { value: "7d", label: "7 dias" },
@@ -130,30 +130,30 @@ export function AppShell({ children }: { children: ReactNode }) {
                     setPeriod(p.value === "7d" ? "week" : p.value === "1m" ? "month" : "d1");
                   }}
                   className={cn(
-                    "min-w-16 rounded-full px-3 py-1.5 font-semibold transition-all",
+                    "min-w-[60px] rounded-full px-3 py-1.5 font-semibold transition-all",
                     period === (p.value === "7d" ? "week" : p.value === "1m" ? "month" : "d1")
-                      ? "bg-primary/25 text-primary shadow-[0_0_18px_rgba(0,180,255,0.25),inset_0_0_14px_rgba(0,180,255,0.12)]"
-                      : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+                      ? "bg-primary/20 text-primary shadow-[0_0_14px_-2px_rgba(0,180,255,0.35),inset_0_0_10px_rgba(0,180,255,0.08)]"
+                      : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
                   )}
                 >
                   {p.label}
                 </button>
               ))}
             </div>
-            <div className="hidden items-center gap-3 rounded-full border border-border/60 bg-surface-2/55 px-3 py-1.5 text-[10px] text-muted-foreground shadow-[inset_0_0_16px_rgba(255,255,255,0.03)] xl:flex">
-              <CalendarDays className="h-3.5 w-3.5 text-primary" />
+            <div className="hidden items-center gap-2.5 rounded-full border border-border/50 bg-surface-2/40 px-3.5 py-1.5 text-[10px] text-muted-foreground xl:flex">
+              <CalendarDays className="h-3.5 w-3.5 text-primary/80" />
               <div className="flex items-center gap-1.5">
-                <span className="uppercase tracking-[0.16em] opacity-70">Período analisado</span>
-                <span className="font-mono font-semibold text-foreground/85">{periodInfo.date}</span>
+                <span className="uppercase tracking-[0.16em] opacity-60">Período</span>
+                <span className="font-mono font-semibold tabular-nums text-foreground/90">{periodInfo.date}</span>
               </div>
-              <span className="h-4 w-px bg-border/70" />
+              <span className="h-3.5 w-px bg-border/60" />
               <div className="flex items-center gap-1.5">
-                <span className="uppercase tracking-[0.16em] opacity-70">Base comparativa</span>
-                <span className="font-mono font-semibold text-foreground/85">{periodLabel}</span>
+                <span className="uppercase tracking-[0.16em] opacity-60">Base</span>
+                <span className="font-mono font-semibold text-foreground/90">{periodLabel}</span>
               </div>
             </div>
-            <div className="hidden font-mono text-xs text-muted-foreground md:block">{now}</div>
-            <div className="grid h-8 w-8 place-items-center rounded-full border border-primary/40 bg-primary/10 text-[11px] font-bold text-primary">
+            <div className="hidden font-mono text-[11px] tabular-nums text-muted-foreground md:block">{now}</div>
+            <div className="grid h-9 w-9 place-items-center rounded-full border border-primary/35 bg-primary/10 text-[11px] font-bold text-primary shadow-[0_0_18px_-4px_rgba(0,180,255,0.4)]">
               OP
             </div>
           </div>

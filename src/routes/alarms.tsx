@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import type React from "react";
 import { useMemo, useState } from "react";
 import {
   Activity,
@@ -114,7 +115,7 @@ function KpiCard({
   subtitle,
   tone,
 }: {
-  icon: typeof Bell;
+  icon: React.ComponentType<any>;
   title: string;
   value: string;
   subtitle: string;
@@ -187,7 +188,7 @@ function AlarmsPage() {
   const recommendations = buildRecommendations(payload);
 
   const filteredEvents = useMemo(() => {
-    return alarmEvents.filter((event) => {
+    return alarmEvents.filter((event: any) => {
       const matchesSeverity = severity === "all" || event.severity === severity;
       const matchesOrigin = origin === "all" || event.origin === origin;
       return matchesSeverity && matchesOrigin;
@@ -254,8 +255,8 @@ function AlarmsPage() {
           </div>
           <div className="relative space-y-0 pl-3">
             <div className="absolute bottom-8 left-[27px] top-8 w-px bg-border/60" />
-            {filteredEvents.map((event) => {
-              const tone = severityTone[event.severity];
+            {filteredEvents.map((event: any) => {
+              const tone = severityTone[event.severity as keyof typeof severityTone];
               const Icon = tone.icon;
               return (
                 <div key={event.id} className="group relative grid grid-cols-[54px_1fr_auto] gap-4 border-b border-border/30 py-4 last:border-b-0 hover:text-white">
@@ -292,8 +293,8 @@ function AlarmsPage() {
           <section className="glass-card p-4">
             <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.12em]">Alarmes mais recorrentes <span className="text-muted-foreground">(período)</span></h2>
             <div className="space-y-4">
-              {recurrentAlarms.map((alarm) => {
-                const tone = severityTone[alarm.severity];
+              {recurrentAlarms.map((alarm: any) => {
+                const tone = severityTone[alarm.severity as keyof typeof severityTone];
                 const Icon = tone.icon;
                 return (
                   <div key={alarm.title} className="grid grid-cols-[36px_1fr_auto] items-center gap-3 rounded-xl p-2 transition-colors hover:bg-surface-2/40 hover:text-white">
@@ -322,7 +323,7 @@ function AlarmsPage() {
             <section className="glass-card p-4">
               <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.12em]">Alarmes por equipamento <span className="text-muted-foreground">(registrados)</span></h2>
               <div className="space-y-3">
-                {equipmentAlarms.map((item) => {
+                {equipmentAlarms.map((item: any) => {
                   const Icon = item.icon;
                   return (
                     <div key={item.name} className="flex items-center justify-between rounded-xl border border-border/30 bg-surface-2/20 p-3 transition-colors hover:border-status-info/40 hover:bg-status-info/10 hover:text-white">
@@ -344,9 +345,9 @@ function AlarmsPage() {
             <section className="glass-card p-4">
               <h2 className="mb-4 font-display text-sm font-bold uppercase tracking-[0.12em]">Recomendações operacionais</h2>
               <div className="space-y-3">
-                {recommendations.map((rec) => {
+                {recommendations.map((rec: any) => {
                   const Icon = rec.icon;
-                  const tone = rec.tone === "ai" ? { text: "text-status-ai", iconBg: "bg-status-ai/15" } : severityTone[rec.tone];
+                  const tone = rec.tone === "ai" ? { text: "text-status-ai", iconBg: "bg-status-ai/15" } : severityTone[rec.tone as keyof typeof severityTone];
                   return (
                     <div key={rec.title} className="grid grid-cols-[42px_1fr] gap-3 rounded-xl border border-border/30 bg-surface-2/20 p-3 transition-colors hover:border-status-ai/50 hover:bg-status-ai/10 hover:text-white">
                       <div className={cn("grid h-10 w-10 place-items-center rounded-lg", tone.iconBg, tone.text)}>

@@ -93,12 +93,16 @@ export function HomeChillerCard({ chiller }: { chiller: ChillerData }) {
     <Link
       to="/chillers/$id"
       params={{ id: chiller.id }}
-      className="group glass-card relative flex min-h-[460px] flex-col overflow-hidden p-3.5 transition-all duration-300 hover:-translate-y-1"
+      className={cn(
+        "group glass-card relative flex min-h-[490px] flex-col overflow-hidden p-3.5 transition-all duration-300 hover:-translate-y-1",
+        theme.ring,
+      )}
       style={{
-        borderColor: halo.replace("0.62", "0.34"),
-        boxShadow: `0 0 0 1px ${halo.replace("0.62", "0.14")}, 0 22px 70px -28px ${halo}`,
+        borderColor: accent,
+        boxShadow: `0 0 0 1px ${accent}, 0 0 22px ${halo}, 0 0 48px ${halo.replace("0.62", "0.35")}, 0 22px 70px -28px ${halo}`,
       }}
     >
+      <div className="pointer-events-none absolute inset-0 rounded-[inherit]" style={{ boxShadow: `inset 0 0 24px ${halo.replace("0.62", "0.22")}` }} />
       <div className="pointer-events-none absolute inset-0 opacity-70" style={{ background: `radial-gradient(circle at 50% 18%, ${halo}, transparent 45%)` }} />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
 
@@ -115,7 +119,7 @@ export function HomeChillerCard({ chiller }: { chiller: ChillerData }) {
         </span>
       </div>
 
-      <div className="relative z-0 mt-2 h-[250px] overflow-hidden rounded-xl border border-border/25 bg-black/10">
+      <div className="relative z-0 mt-2 h-[290px] overflow-hidden rounded-xl border border-border/25 bg-black/10">
         <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: `linear-gradient(90deg, transparent, ${halo.replace("0.62", "0.18")}, transparent)` }} />
         <div className="pointer-events-none absolute inset-0">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -126,18 +130,18 @@ export function HomeChillerCard({ chiller }: { chiller: ChillerData }) {
             />
           ))}
         </div>
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-64 w-[30rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-xl" style={{ background: `radial-gradient(closest-side, ${halo}, transparent 72%)` }} />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-[34rem] -translate-x-1/2 -translate-y-1/2 rounded-full blur-xl" style={{ background: `radial-gradient(closest-side, ${halo}, transparent 72%)` }} />
         <img
           src={chillerImageById[chiller.id] || chillerBlue}
           alt={chiller.name}
           loading="lazy"
           draggable={false}
-          className="absolute bottom-6 left-1/2 z-10 h-[310px] w-auto max-w-[205%] -translate-x-1/2 object-contain transition-transform duration-500 group-hover:scale-[1.04]"
-          style={{ filter: `drop-shadow(0 18px 22px ${halo}) drop-shadow(0 0 34px ${halo})` }}
+          className="absolute bottom-6 left-1/2 z-10 h-[370px] w-auto max-w-[235%] -translate-x-1/2 object-contain transition-transform duration-500 group-hover:scale-[1.04]"
+          style={{ filter: `drop-shadow(0 20px 26px ${halo}) drop-shadow(0 0 40px ${halo})` }}
         />
         <div
-          className="pointer-events-none absolute bottom-5 left-1/2 z-20 h-5 w-[76%] -translate-x-1/2 rounded-[50%]"
-          style={{ background: `radial-gradient(closest-side, ${accent}, transparent 72%)`, boxShadow: `0 0 24px 5px ${halo}`, opacity: 0.9 }}
+          className="pointer-events-none absolute bottom-5 left-1/2 z-20 h-5 w-[80%] -translate-x-1/2 rounded-[50%]"
+          style={{ background: `radial-gradient(closest-side, ${accent}, transparent 72%)`, boxShadow: `0 0 28px 6px ${halo}`, opacity: 0.92 }}
         />
         <div className="absolute bottom-0 left-6 right-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
       </div>

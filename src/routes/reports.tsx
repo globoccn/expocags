@@ -74,7 +74,7 @@ function base64ToBlob(base64: string, mimeType = "application/pdf") {
     byteArrays.push(new Uint8Array(byteNumbers));
   }
 
-  return new Blob(byteArrays, { type: mimeType });
+  return new Blob(byteArrays as BlobPart[], { type: mimeType });
 }
 
 function downloadBlob(blob: Blob, filename: string) {
