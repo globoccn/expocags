@@ -256,9 +256,8 @@ function ChillersPage() {
                   <span>{status.occurrence}</span>
                 </div>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div className="mt-3 grid grid-cols-1 gap-3 text-sm">
                 <Metric label="Horas de operação" value={text(active.operatingHours === null || active.operatingHours === undefined ? null : active.operatingHours / 1000, " h", 1)} />
-                <Metric label="Data analisada" value={selectedPeriod.date} />
               </div>
             </div>
           </div>
