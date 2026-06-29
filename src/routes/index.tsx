@@ -269,7 +269,7 @@ function InfoFooter({ icon: Icon, label, value, detail }: { icon: typeof Calenda
 }
 
 function Index() {
-  const { period, setPeriod, payload } = useDashboard();
+  const { period, payload } = useDashboard();
   const cfg = { ...periodConfig[period], ...labelForPeriod(payload, period) };
   const data = homePageData(payload, period, { CircuitBoard, Droplets, AlertTriangle, Bell, LineChart, ThermometerSun });
 
@@ -287,43 +287,6 @@ function Index() {
     <div className="relative space-y-5 overflow-hidden pb-2">
       <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-status-ai/10 blur-3xl" />
       <div className="pointer-events-none absolute left-1/4 top-40 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
-
-      <section className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-primary/80">Centro de Inteligência Operacional</div>
-          <h1 className="mt-1 font-display text-3xl font-bold tracking-tight md:text-4xl">Visão Operacional da Central</h1>
-          <p className="mt-1 text-sm text-muted-foreground md:text-base">Resumo consolidado de chillers, bombas e ocorrências operacionais.</p>
-        </div>
-        <div className="flex flex-col gap-3 lg:items-end">
-          <div>
-            <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Período analisado</div>
-            <div className="inline-flex rounded-xl border border-border/60 bg-surface-2/50 p-1 shadow-[inset_0_0_22px_rgba(0,180,255,0.05)]">
-              {(Object.keys(periodConfig) as PeriodKey[]).map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setPeriod(key)}
-                  className={cn(
-                    "rounded-lg px-4 py-2 text-sm font-semibold transition-all",
-                    period === key
-                      ? "bg-primary/25 text-primary shadow-[0_0_20px_rgba(0,180,255,0.24),inset_0_0_14px_rgba(0,180,255,0.12)]"
-                      : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
-                  )}
-                >
-                  {periodConfig[key].label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-surface-2/45 px-4 py-3">
-            <CalendarDays className="h-4 w-4 text-primary" />
-            <div className="text-right">
-              <div className="font-display text-sm font-semibold">{cfg.date}</div>
-              <div className="text-[11px] text-muted-foreground">Base comparativa: {cfg.short}</div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {data.kpis.map((item) => <KpiCard key={item.label} item={item} />)}
@@ -405,7 +368,7 @@ function Index() {
       </section>
 
       <section className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <InfoFooter icon={CalendarDays} label="Período analisado" value={cfg.analyzed.split(" até ")[0]} detail={`até ${cfg.analyzed.split(" até ")[1]}`} />
+        <InfoFooter icon={CalendarDays} label="Período analisado" value={cfg.date} detail={`Base comparativa: ${cfg.short}`} />
         <InfoFooter icon={LineChart} label="Cobertura das leituras" value={data.kpis[4]?.value || "--"} detail={period === "d1" ? "+2 pp vs ontem" : `comparado ao período anterior`} />
         <InfoFooter icon={Database} label="Dados coletados" value={data.kpis[4]?.value || "--"} detail="Qualidade dos dados" />
         <InfoFooter icon={Clock3} label="Atualização dos dados" value="07:00" detail="Diariamente pela manhã" />

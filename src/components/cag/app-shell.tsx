@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   AlertTriangle,
   BarChart3,
+  CalendarDays,
   Brain,
   CircuitBoard,
   Droplets,
@@ -11,7 +12,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { useDashboardPeriod } from "@/lib/dashboard-api";
+import { labelForPeriod, useDashboardPayload, useDashboardPeriod } from "@/lib/dashboard-api";
 import { cn } from "@/lib/utils";
 import centerNorteLogo from "@/assets/center-norte-logo.jpg";
 
@@ -30,6 +31,9 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [now, setNow] = useState("");
   const [period, setPeriod] = useDashboardPeriod();
+  const { payload } = useDashboardPayload(period);
+  const periodInfo = labelForPeriod(payload, period);
+  const periodLabel = period === "d1" ? "D-1 (Ontem)" : period === "week" ? "Semana" : "Mês";
 
   useEffect(() => {
     const tick = () => {
@@ -139,14 +143,15 @@ export function AppShell({ children }: { children: ReactNode }) {
               ))}
             </div>
             <div className="hidden items-center gap-3 rounded-full border border-border/60 bg-surface-2/55 px-3 py-1.5 text-[10px] text-muted-foreground shadow-[inset_0_0_16px_rgba(255,255,255,0.03)] xl:flex">
+              <CalendarDays className="h-3.5 w-3.5 text-primary" />
               <div className="flex items-center gap-1.5">
-                <span className="uppercase tracking-[0.16em] opacity-70">Dados da base</span>
-                <span className="font-mono font-semibold text-foreground/85">19/06/2026 (D-1)</span>
+                <span className="uppercase tracking-[0.16em] opacity-70">Período analisado</span>
+                <span className="font-mono font-semibold text-foreground/85">{periodInfo.date}</span>
               </div>
               <span className="h-4 w-px bg-border/70" />
               <div className="flex items-center gap-1.5">
-                <span className="uppercase tracking-[0.16em] opacity-70">Atualizado</span>
-                <span className="font-mono font-semibold text-foreground/85">20/06/2026 06:05</span>
+                <span className="uppercase tracking-[0.16em] opacity-70">Base comparativa</span>
+                <span className="font-mono font-semibold text-foreground/85">{periodLabel}</span>
               </div>
             </div>
             <div className="hidden font-mono text-xs text-muted-foreground md:block">{now}</div>
