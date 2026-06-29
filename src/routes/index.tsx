@@ -67,6 +67,7 @@ const chillerAccent = {
 };
 
 const chillerImages = { azul: chillerBlue, vermelho: chillerRed, branco: chillerWhite };
+const chillerBorderClass = { azul: "neon-border-blue", vermelho: "neon-border-red", branco: "neon-border-white" };
 
 function Delta({ tone, value }: { tone: "up" | "down" | "neutral"; value: string }) {
   const clean = value && value !== "--";
@@ -120,7 +121,7 @@ function ChillerStatusCard({ item }: { item: HomeChillerStatus }) {
   const image = chillerImages[item.id];
   const isWarn = item.tone === "warn";
   return (
-    <Link to="/chillers/$id" params={{ id: item.id }} className="glass-card group relative min-h-[300px] overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40">
+    <Link to="/chillers/$id" params={{ id: item.id }} className={cn("glass-card group relative min-h-[300px] overflow-hidden p-5 transition-all duration-300 hover:-translate-y-0.5", chillerBorderClass[item.id])}>
       <div className="pointer-events-none absolute inset-0 opacity-50" style={{ background: `radial-gradient(circle at 18% 30%, ${color.replace(")", " / 0.12)")}, transparent 45%)` }} />
       <div className="relative flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
@@ -129,9 +130,9 @@ function ChillerStatusCard({ item }: { item: HomeChillerStatus }) {
         </div>
         <StatusPill tone={item.tone}>{item.status}</StatusPill>
       </div>
-      <div className="relative mt-5 h-44 overflow-visible rounded-xl border border-border/20 bg-black/15">
+      <div className="relative mt-5 h-44 overflow-visible rounded-xl border border-border/35 bg-card/55 dark:bg-black/15">
         <div className="absolute inset-0 rounded-xl opacity-55" style={{ background: `radial-gradient(circle at 50% 55%, ${color.replace(")", " / 0.22)")}, transparent 70%)` }} />
-        <div className="absolute inset-x-3 bottom-3 h-8 rounded-[50%] bg-black/40 blur-md" />
+        <div className="absolute inset-x-3 bottom-3 h-8 rounded-[50%] bg-foreground/10 blur-md dark:bg-black/40" />
         <img src={image} alt={item.name} className="absolute left-1/2 top-1/2 z-10 h-[190px] w-[132%] max-w-none -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_18px_28px_rgba(0,0,0,0.65)] transition-transform duration-500 group-hover:scale-[1.04]" />
       </div>
       <div className="relative mt-5 grid grid-cols-3 gap-3 border-t border-border/25 pt-4">

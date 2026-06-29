@@ -82,8 +82,8 @@ function PremiumTooltip({ active, payload, label, series }: TooltipProps<number,
   });
 
   return (
-    <div className="min-w-[230px] rounded-2xl border border-primary/35 bg-[#07101c]/95 px-4 py-3 text-xs shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_34px_rgba(34,211,238,0.16)] backdrop-blur-xl">
-      <div className="mb-2 font-display text-sm font-bold text-primary">{String(label ?? "")}</div>
+    <div className="min-w-[230px] rounded-2xl border border-border/70 bg-popover/95 px-4 py-3 text-xs text-popover-foreground shadow-[0_20px_60px_rgba(0,0,0,0.18)] backdrop-blur-xl dark:border-primary/30 dark:bg-[#07101c]/92 dark:shadow-[0_24px_70px_rgba(0,0,0,0.55),0_0_26px_rgba(34,211,238,0.12)]">
+      <div className="mb-2 font-display text-sm font-bold text-foreground dark:text-primary">{String(label ?? "")}</div>
       <div className="space-y-2">
         {rows.map((item) => {
           const config = series.find((s) => s.key === item.dataKey);
@@ -108,14 +108,14 @@ function PremiumTooltip({ active, payload, label, series }: TooltipProps<number,
 
 function SummaryStats({ data, series }: { data: Array<Record<string, any>>; series: EnterpriseSeries[] }) {
   return (
-    <div className="mt-4 grid gap-3 border-t border-white/8 pt-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="mt-3 grid gap-2 border-t border-border/45 pt-3 md:grid-cols-2 xl:grid-cols-4">
       {series.slice(0, 4).map((s) => {
         const values = data.map((row) => Number(row[s.key])).filter((v) => Number.isFinite(v));
         const avg = values.length ? values.reduce((acc, v) => acc + v, 0) / values.length : null;
         const color = colorFor(s);
         return (
-          <div key={s.key} className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.025] px-3 py-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full border bg-black/20" style={{ borderColor: `${color}55`, color, boxShadow: `0 0 24px ${color}25` }}>
+          <div key={s.key} className="flex items-center gap-2.5 rounded-xl border border-border/55 bg-card/55 px-3 py-2.5 shadow-sm dark:bg-white/[0.025]">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full border bg-background/50 dark:bg-black/20" style={{ borderColor: `${color}55`, color, boxShadow: `0 0 24px ${color}25` }}>
               <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
             </span>
             <div className="min-w-0">
@@ -150,15 +150,15 @@ export function EnterpriseLineChart({
   const hasRight = series.some((s) => (s.axis || "left") === "right");
 
   return (
-    <div className={cn("relative overflow-hidden rounded-2xl border border-primary/10 bg-[#07111e]/35", className)}>
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.13),transparent_45%),linear-gradient(180deg,rgba(255,255,255,0.035),transparent_34%)]" />
-      <div className="pointer-events-none absolute inset-x-8 top-10 h-24 rounded-full bg-primary/5 blur-3xl" />
+    <div className={cn("enterprise-chart-panel relative overflow-hidden rounded-2xl", className)}>
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.055),transparent_48%),linear-gradient(180deg,rgba(255,255,255,0.025),transparent_34%)] dark:bg-[radial-gradient(circle_at_50%_0%,rgba(34,211,238,0.075),transparent_48%),linear-gradient(180deg,rgba(255,255,255,0.025),transparent_34%)]" />
+      <div className="pointer-events-none absolute inset-x-8 top-10 h-20 rounded-full bg-primary/[0.025] blur-3xl dark:bg-primary/[0.035]" />
       {showLegend && (
         <div className="relative z-10 flex flex-wrap gap-2 px-4 pt-4">
           {series.map((s) => {
             const color = colorFor(s);
             return (
-              <span key={s.key} className="inline-flex items-center gap-2 rounded-full border bg-black/20 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color, borderColor: `${color}55`, boxShadow: `inset 0 0 18px ${color}10` }}>
+              <span key={s.key} className="inline-flex items-center gap-2 rounded-full border bg-background/50 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.1em] shadow-sm dark:bg-black/20" style={{ color, borderColor: `${color}55`, boxShadow: `inset 0 0 18px ${color}10` }}>
                 <span className={cn("h-0.5 w-4 rounded-full", s.dashed && "border-t border-dashed bg-transparent")} style={{ backgroundColor: s.dashed ? "transparent" : color, borderColor: color }} />
                 {s.label}
               </span>
@@ -174,34 +174,34 @@ export function EnterpriseLineChart({
                 const color = colorFor(s);
                 return (
                   <linearGradient key={s.key} id={`${uid}-${s.key}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={color} stopOpacity={0.24} />
-                    <stop offset="55%" stopColor={color} stopOpacity={0.08} />
+                    <stop offset="0%" stopColor={color} stopOpacity={0.105} />
+                    <stop offset="58%" stopColor={color} stopOpacity={0.035} />
                     <stop offset="100%" stopColor={color} stopOpacity={0} />
                   </linearGradient>
                 );
               })}
             </defs>
-            <CartesianGrid stroke="rgba(148,163,184,0.10)" strokeDasharray="3 8" vertical={false} />
-            <XAxis dataKey={xKey} tick={{ fill: "rgba(203,213,225,0.72)", fontSize: 11 }} axisLine={false} tickLine={false} dy={8} />
-            <YAxis yAxisId="left" domain={leftDomain as any} ticks={leftTicks} tick={{ fill: "rgba(203,213,225,0.72)", fontSize: 11 }} axisLine={false} tickLine={false} width={38} tickFormatter={(v) => `${v}${leftUnit}`} />
-            {hasRight && <YAxis yAxisId="right" orientation="right" domain={rightDomain as any} ticks={rightTicks} tick={{ fill: "rgba(203,213,225,0.72)", fontSize: 11 }} axisLine={false} tickLine={false} width={42} tickFormatter={(v) => `${v}${rightUnit}`} />}
-            <Tooltip cursor={{ stroke: "rgba(34,211,238,0.45)", strokeDasharray: "3 5", strokeWidth: 1 }} content={<PremiumTooltip series={series} />} />
+            <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="3 10" vertical={false} />
+            <XAxis dataKey={xKey} tick={{ fill: "var(--chart-tick)", fontSize: 11 }} axisLine={false} tickLine={false} dy={8} />
+            <YAxis yAxisId="left" domain={leftDomain as any} ticks={leftTicks} tick={{ fill: "var(--chart-tick)", fontSize: 11 }} axisLine={false} tickLine={false} width={38} tickFormatter={(v) => `${v}${leftUnit}`} />
+            {hasRight && <YAxis yAxisId="right" orientation="right" domain={rightDomain as any} ticks={rightTicks} tick={{ fill: "var(--chart-tick)", fontSize: 11 }} axisLine={false} tickLine={false} width={42} tickFormatter={(v) => `${v}${rightUnit}`} />}
+            <Tooltip cursor={{ stroke: "var(--chart-crosshair)", strokeDasharray: "3 6", strokeWidth: 1 }} content={<PremiumTooltip series={series} />} />
             {series.map((s) => {
               const color = colorFor(s);
               const axis = s.axis || "left";
-              return s.fill || !s.dashed ? (
+              return s.fill ? (
                 <Area key={`${s.key}-area`} yAxisId={axis} type="monotone" dataKey={s.key} fill={`url(#${uid}-${s.key})`} stroke="none" isAnimationActive={false} legendType="none" activeDot={false} />
               ) : null;
             })}
             {series.map((s) => {
               const color = colorFor(s);
               const axis = s.axis || "left";
-              return <Line key={`${s.key}-glow`} yAxisId={axis} type="monotone" dataKey={s.key} stroke={color} strokeWidth={8} strokeOpacity={s.dashed ? 0.08 : 0.12} strokeDasharray={s.dashed ? "5 6" : undefined} dot={false} activeDot={false} legendType="none" isAnimationActive={false} />;
+              return <Line key={`${s.key}-glow`} yAxisId={axis} type="monotone" dataKey={s.key} stroke={color} strokeWidth={5} strokeOpacity={s.dashed ? 0.04 : 0.085} strokeDasharray={s.dashed ? "5 6" : undefined} dot={false} activeDot={false} legendType="none" isAnimationActive={false} />;
             })}
             {series.map((s) => {
               const color = colorFor(s);
               const axis = s.axis || "left";
-              return <Line key={s.key} yAxisId={axis} type="monotone" dataKey={s.key} name={s.label} stroke={color} strokeWidth={s.dashed ? 2.2 : 2.8} strokeDasharray={s.dashed ? "5 6" : undefined} dot={false} activeDot={{ r: 6, strokeWidth: 2, stroke: "#07111e", fill: color }} isAnimationActive animationDuration={700} />;
+              return <Line key={s.key} yAxisId={axis} type="monotone" dataKey={s.key} name={s.label} stroke={color} strokeWidth={s.dashed ? 1.9 : 2.35} strokeDasharray={s.dashed ? "5 6" : undefined} dot={false} activeDot={{ r: 6, strokeWidth: 2, stroke: "var(--background)", fill: color }} isAnimationActive animationDuration={700} />;
             })}
           </ComposedChart>
         </ResponsiveContainer>
