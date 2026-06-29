@@ -63,9 +63,9 @@ type HomeChillerStatus = {
 };
 
 const periodConfig: Record<PeriodKey, { comparison: string }> = {
-  d1: { comparison: "vs ontem anterior" },
-  week: { comparison: "vs semana anterior" },
-  month: { comparison: "vs mês anterior" },
+  d1: { comparison: "Ontem (D-1)" },
+  week: { comparison: "Semana anterior" },
+  month: { comparison: "Mês anterior" },
 };
 
 const toneClasses: Record<
@@ -187,13 +187,13 @@ function StatusPill({ tone, children }: { tone: Tone; children: ReactNode }) {
   );
 }
 
-function KpiCard({ item }: { item: HomeKpi }) {
+function KpiCard({ item, comparisonLabel }: { item: HomeKpi; comparisonLabel: string }) {
   const Icon = item.icon;
   const t = toneClasses[item.tone];
   const spark = Array.isArray(item.sparkline)
     ? item.sparkline.filter((p) => Number.isFinite(Number(p?.v)))
     : [];
-  const comparisonLabel = item.previous || "vs período anterior";
+  const normalizedComparisonLabel = comparisonLabel || item.previous || "período anterior";
   return (
     <article
       className={cn(
@@ -240,7 +240,7 @@ function KpiCard({ item }: { item: HomeKpi }) {
             <div className="flex items-center justify-between gap-3">
               <Delta tone={item.deltaTone} value={item.delta} compact />
               <span className="truncate text-[10px] font-medium text-muted-foreground">
-                {comparisonLabel}
+                {normalizedComparisonLabel}
               </span>
             </div>
           </div>
@@ -373,10 +373,10 @@ function ComparisonPanel({ kpis, periodLabel }: { kpis: HomeKpi[]; periodLabel: 
       <div className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full bg-primary/10 blur-3xl" />
       <div className="relative">
         <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-          Comparação com
+          Comparados com
         </p>
         <h2 className="mt-1 font-display text-2xl font-bold uppercase tracking-tight text-foreground">
-          {periodLabel.replace(/^vs\s+/i, "") || "Período anterior"}
+          {periodLabel || "Período anterior"}
         </h2>
         <div className="mt-4 overflow-hidden rounded-2xl border border-border/45 bg-background/25 dark:bg-black/15">
           {items.map((item, index) => {
@@ -412,7 +412,7 @@ function ComparisonPanel({ kpis, periodLabel }: { kpis: HomeKpi[]; periodLabel: 
                 <div className="shrink-0 text-right">
                   <Delta tone={item.deltaTone} value={item.delta} />
                   <div className="mt-0.5 text-[10px] text-muted-foreground">
-                    {item.previous || periodLabel}
+                    {periodLabel}
                   </div>
                 </div>
               </div>
@@ -474,7 +474,7 @@ function ComparisonPanel({ kpis, periodLabel }: { kpis: HomeKpi[]; periodLabel: 
               </div>
               <div className="text-xs text-muted-foreground">
                 {firstWithChange
-                  ? `${cleanDeltaText(firstWithChange.delta) || "--"} ${firstWithChange.previous || periodLabel}`
+                  ? `${cleanDeltaText(firstWithChange.delta) || "--"} vs ${periodLabel}`
                   : "Sem destaque disponível."}
               </div>
             </div>
@@ -560,7 +560,7 @@ function Index() {
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {data.kpis.map((item) => (
-          <KpiCard key={item.label} item={item} />
+          <KpiCard key={item.label} item={item} comparisonLabel={cfg.comparison} />
         ))}
       </section>
 

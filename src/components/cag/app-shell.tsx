@@ -7,11 +7,13 @@ import {
   Droplets,
   FileText,
   LayoutDashboard,
-  Settings,
+  Moon,
+  Sun,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { labelForPeriod, useDashboardPayload, useDashboardPeriod } from "@/lib/dashboard-api";
+import { useTheme } from "@/components/cag/theme-provider";
 import { cn } from "@/lib/utils";
 import centerNorteLogo from "@/assets/center-norte-logo.jpg";
 
@@ -22,13 +24,13 @@ const nav = [
   { to: "/ai", label: "Assistente IA", icon: Brain },
   { to: "/trends", label: "Tendências", icon: BarChart3 },
   { to: "/reports", label: "Relatórios Hidrômetros", icon: FileText },
-  { to: "/settings", label: "Configurações", icon: Settings },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [now, setNow] = useState("");
   const [period, setPeriod] = useDashboardPeriod();
+  const { theme, setTheme } = useTheme();
   const { payload } = useDashboardPayload(period);
   const periodInfo = labelForPeriod(payload, period);
   const periodLabel = period === "d1" ? "D-1 (Ontem)" : period === "week" ? "Semana" : "Mês";
@@ -151,6 +153,15 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <span className="uppercase tracking-[0.16em] opacity-60">Base</span>
                 <span className="font-mono font-semibold text-foreground/90">{periodLabel}</span>
               </div>
+              <span className="h-3.5 w-px bg-border/60" />
+              <button
+                type="button"
+                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+                aria-label={theme === "light" ? "Ativar tema escuro" : "Ativar tema claro"}
+                className="inline-grid h-7 w-7 place-items-center rounded-full border border-border/60 bg-background/40 text-muted-foreground transition hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
+              >
+                {theme === "light" ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
+              </button>
             </div>
             <div className="hidden font-mono text-[11px] tabular-nums text-muted-foreground md:block">{now}</div>
             <div className="grid h-9 w-9 place-items-center rounded-full border border-primary/35 bg-primary/10 text-[11px] font-bold text-primary shadow-[0_0_18px_-4px_rgba(0,180,255,0.4)]">
