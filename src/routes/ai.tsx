@@ -280,25 +280,9 @@ function AIPage() {
   const sessionId = useMemo(() => getSessionId(), []);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [historyLoading, setHistoryLoading] = useState(true);
   const [loadingStep, setLoadingStep] = useState(0);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    setHistoryLoading(true);
-    loadVisualHistory(sessionId)
-      .then((history) => {
-        if (!cancelled) setMessages(history);
-      })
-      .finally(() => {
-        if (!cancelled) setHistoryLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [sessionId]);
 
   useEffect(() => {
     if (!loading) {
@@ -312,7 +296,7 @@ function AIPage() {
   }, [loading]);
 
   const introText = useMemo(() => {
-    if (!messages.length) return "Faça uma pergunta para gerar uma análise independente baseada no período selecionado. O histórico abaixo é apenas visual e não contamina a IA.";
+    if (!messages.length) return "Faça uma pergunta para gerar uma análise independente baseada no período selecionado. O histórico fica visível apenas nesta sessão da aba e some ao atualizar a página.";
     return "Cada nova pergunta é analisada de forma independente com base no dashboard atual e na base técnica Carrier.";
   }, [messages.length]);
 
@@ -333,19 +317,15 @@ function AIPage() {
 
     try {
       const response = await askAssistant(question, period, sessionId);
-      if (response.history?.length) {
-        setMessages(response.history);
-      } else {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: `assistant-${Date.now()}`,
-            role: "assistant",
-            content: response.answer,
-            structured: response.structured,
-          },
-        ]);
-      }
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `assistant-${Date.now()}`,
+          role: "assistant",
+          content: response.answer,
+          structured: response.structured,
+        },
+      ]);
     } catch (err: any) {
       const message = err?.message || "Falha ao consultar o Copilot de Manutenção.";
       setError(message);
@@ -401,7 +381,7 @@ function AIPage() {
           <button
             type="button"
             onClick={clearChat}
-            disabled={loading || historyLoading || !messages.length}
+            disabled={loading || !messages.length}
             className="inline-flex h-11 items-center gap-2 rounded-xl border border-border/70 bg-background/35 px-3 text-xs font-semibold text-muted-foreground transition hover:border-status-ai/40 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45"
           >
             <RotateCcw className="h-4 w-4" /> Nova análise
@@ -435,11 +415,7 @@ function AIPage() {
 
       <section className="flex flex-1 flex-col rounded-2xl border border-status-ai/45 bg-gradient-to-br from-status-ai/10 via-surface-1/70 to-background/40 p-5 shadow-[0_0_36px_rgba(168,85,247,0.12)]">
         <div className="flex flex-1 flex-col justify-center gap-4 py-6">
-          {historyLoading ? (
-            <div className="mx-auto flex items-center gap-3 text-sm text-muted-foreground">
-              <Loader2 className="h-5 w-5 animate-spin text-status-ai" /> Carregando histórico visual...
-            </div>
-          ) : !messages.length ? (
+          {!messages.length ? (
             <div className="mx-auto max-w-xl text-center">
               <div className="mx-auto grid h-16 w-16 place-items-center rounded-2xl border border-status-ai/40 bg-status-ai/15 text-status-ai shadow-[0_0_28px_rgba(168,85,247,0.18)]">
                 <Bot className="h-8 w-8" />
@@ -510,7 +486,7 @@ function AIPage() {
           </form>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <CheckCircle2 className="h-4 w-4 text-status-ai" />
-            A IA não recebe histórico do chat. Cada pergunta usa somente o período selecionado, a base Carrier e os dados consolidados.
+            A IA não recebe histórico do chat. Ao atualizar a página, a conversa visual é reiniciada.
           </div>
           {error && <div className="mt-2 text-xs text-status-crit">{error}</div>}
         </div>
