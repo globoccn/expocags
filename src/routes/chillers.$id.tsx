@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import {
   Activity,
   AlertTriangle,
@@ -28,8 +28,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { chillerTheme, type ChillerData } from "@/data/mockCagData";
-import { legacyChillers, useDashboard } from "@/lib/dashboard-api";
+import { getChiller, chillerTheme, type ChillerData } from "@/data/mockCagData";
 import { EquipmentRender } from "@/components/cag/equipment-render";
 import { KpiCard } from "@/components/cag/kpi-card";
 import { HealthRing, HealthFactors } from "@/components/cag/health-score";
@@ -40,6 +39,11 @@ export const Route = createFileRoute("/chillers/$id")({
   head: ({ params }) => ({
     meta: [{ title: `Chiller ${params.id} — CAG Intelligence AI` }],
   }),
+  loader: ({ params }) => {
+    const c = getChiller(params.id);
+    if (!c) throw notFound();
+    return c;
+  },
   component: ChillerPage,
   notFoundComponent: () => <div className="p-8 text-center">Chiller não encontrado.</div>,
 });
@@ -57,10 +61,7 @@ function Row({ label, value, unit }: { label: string; value: string | number; un
 }
 
 function ChillerPage() {
-  const { id } = Route.useParams();
-  const { payload } = useDashboard();
-  const c = (legacyChillers(payload).find((item: any) => item.id === id) || legacyChillers(payload)[0]) as ChillerData;
-  if (!c) return <div className="p-8 text-center">Chiller não encontrado.</div>;
+  const c = Route.useLoaderData() as ChillerData;
   const theme = chillerTheme[c.id];
   const color = theme.hex;
 
@@ -137,10 +138,10 @@ function ChillerPage() {
               <HealthRing score={circ.healthScore} size={56} label="" />
             </div>
             <Row label="Capacidade" value={circ.capacity} unit="%" />
-            <Row label="Pressão Alta / Descarga" value={circ.highPressure.toFixed(1)} unit="psi" />
-            <Row label="Pressão Baixa / Sucção" value={circ.lowPressure.toFixed(1)} unit="psi" />
-            <Row label="Pressão Óleo Comp. 1" value={circ.oilPressureC1.toFixed(1)} unit="psi" />
-            <Row label="Pressão Óleo Comp. 2" value={circ.oilPressureC2.toFixed(1)} unit="psi" />
+            <Row label="Pressão Alta / Descarga" value={circ.highPressure.toFixed(1)} unit="bar" />
+            <Row label="Pressão Baixa / Sucção" value={circ.lowPressure.toFixed(1)} unit="bar" />
+            <Row label="Pressão Óleo Comp. 1" value={circ.oilPressureC1.toFixed(1)} unit="bar" />
+            <Row label="Pressão Óleo Comp. 2" value={circ.oilPressureC2.toFixed(1)} unit="bar" />
             <div className="mt-2 flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Compressor 1</span>
               <StatusBadge status={circ.compressor1Status} />
@@ -167,7 +168,7 @@ function ChillerPage() {
                 </div>
                 <StatusBadge status={cmp.status} />
               </div>
-              <Row label="Pressão Óleo" value={cmp.oilPressure.toFixed(1)} unit="psi" />
+              <Row label="Pressão Óleo" value={cmp.oilPressure.toFixed(1)} unit="bar" />
               <Row label="Horas" value={cmp.hours.toLocaleString()} unit="h" />
               <Row label="Partidas" value={cmp.starts} />
               <Row label="Saúde" value={`${cmp.health}/100`} />
@@ -202,9 +203,9 @@ function ChillerPage() {
         </div>
         <div className="glass-card p-5">
           <h3 className="mb-3 font-display text-sm font-semibold">Conjunto Hidráulico</h3>
-          <Row label="Pressão Linha" value={c.hydraulic.pressureLine.toFixed(2)} unit="psi" />
-          <Row label="Setpoint Pressão" value={c.hydraulic.pressureSetpoint.toFixed(2)} unit="psi" />
-          <Row label="Erro Pressão" value={c.hydraulic.pressureError.toFixed(2)} unit="psi" />
+          <Row label="Pressão Linha" value={c.hydraulic.pressureLine.toFixed(2)} unit="bar" />
+          <Row label="Setpoint Pressão" value={c.hydraulic.pressureSetpoint.toFixed(2)} unit="bar" />
+          <Row label="Erro Pressão" value={c.hydraulic.pressureError.toFixed(2)} unit="bar" />
           <Row label="Válvula Bypass" value={c.hydraulic.bypassValve} unit="%" />
         </div>
       </div>

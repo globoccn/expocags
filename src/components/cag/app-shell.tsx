@@ -1,19 +1,16 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
+  AlertTriangle,
   BarChart3,
-  CalendarDays,
   Brain,
   CircuitBoard,
   Droplets,
   FileText,
   LayoutDashboard,
-  Moon,
-  Sun,
+  Settings,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { labelForPeriod, useDashboardPayload, useDashboardPeriod } from "@/lib/dashboard-api";
-import { useTheme } from "@/components/cag/theme-provider";
 import { cn } from "@/lib/utils";
 import centerNorteLogo from "@/assets/center-norte-logo.jpg";
 
@@ -21,19 +18,22 @@ const nav = [
   { to: "/", label: "Visão Geral", icon: LayoutDashboard },
   { to: "/chillers", label: "Chillers", icon: CircuitBoard },
   { to: "/pumps", label: "Bombas", icon: Droplets },
-  { to: "/ai", label: "Assistente IA", icon: Brain },
+  { to: "/ai", label: "Análise IA", icon: Brain },
   { to: "/trends", label: "Tendências", icon: BarChart3 },
-  { to: "/reports", label: "Relatórios Hidrômetros", icon: FileText },
+  { to: "/alarms", label: "Alarmes", icon: AlertTriangle },
+  { to: "/reports", label: "Relatórios", icon: FileText },
+  { to: "/settings", label: "Configurações", icon: Settings },
 ] as const;
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [now, setNow] = useState("");
-  const [period, setPeriod] = useDashboardPeriod();
-  const { theme, setTheme } = useTheme();
-  const { payload } = useDashboardPayload(period);
-  const periodInfo = labelForPeriod(payload, period);
-  const periodLabel = period === "d1" ? "D-1 (Ontem)" : period === "week" ? "Semana" : "Mês";
+  const [period, setPeriod] = useState("d1");
+
+  const isReports = pathname.startsWith("/reports");
+  const headerContext = isReports
+    ? { title: "Relatórios da Central", subtitle: "Expo Center Norte · Documentação operacional" }
+    : { title: "Visão Geral da Central", subtitle: "Expo Center Norte · Análise Operacional" };
 
   useEffect(() => {
     const tick = () => {
@@ -102,69 +102,61 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
         <div className="border-t border-border/40 px-3 py-3 text-[10px] text-muted-foreground">
           <div className="text-[9px] uppercase tracking-[0.18em] opacity-60">
-            v1.0 · build 2026.06
+            v1.1 · build 2026.08
           </div>
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Header */}
-        <header className="sticky top-0 z-30 flex h-[68px] items-center gap-3 border-b border-border/40 bg-background/70 px-5 backdrop-blur-xl">
-          <div className="hidden min-w-0 md:block">
-            <div className="font-display text-[19px] font-bold uppercase leading-none tracking-[0.04em] text-foreground">
-              Visão Geral da Central
+        <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b border-border/40 bg-background/70 px-4 backdrop-blur-xl">
+          <div className="hidden md:block">
+            <div className="font-display text-sm font-semibold leading-none">
+              {headerContext.title}
             </div>
-            <div className="mt-1.5 text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-              Expo Center Norte · Análise Operacional
+            <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+              {headerContext.subtitle}
             </div>
           </div>
-          <div className="ml-auto flex items-center gap-2.5">
-            <div className="hidden overflow-hidden rounded-full border border-border/60 bg-surface-2/50 p-0.5 text-[11px] md:flex">
-              {[
-                { value: "d1", label: "D-1" },
-                { value: "7d", label: "7 dias" },
-                { value: "1m", label: "1 mês" },
-              ].map((p) => (
-                <button
-                  key={p.value}
-                  type="button"
-                  onClick={() => {
-                    setPeriod(p.value === "7d" ? "week" : p.value === "1m" ? "month" : "d1");
-                  }}
-                  className={cn(
-                    "min-w-[60px] rounded-full px-3 py-1.5 font-semibold transition-all",
-                    period === (p.value === "7d" ? "week" : p.value === "1m" ? "month" : "d1")
-                      ? "bg-primary/20 text-primary shadow-[0_0_14px_-2px_rgba(0,180,255,0.35),inset_0_0_10px_rgba(0,180,255,0.08)]"
-                      : "text-muted-foreground hover:bg-white/[0.04] hover:text-foreground",
-                  )}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-            <div className="hidden items-center gap-2.5 rounded-full border border-border/50 bg-surface-2/40 px-3.5 py-1.5 text-[10px] text-muted-foreground xl:flex">
-              <CalendarDays className="h-3.5 w-3.5 text-primary/80" />
-              <div className="flex items-center gap-1.5">
-                <span className="uppercase tracking-[0.16em] opacity-60">Período</span>
-                <span className="font-mono font-semibold tabular-nums text-foreground/90">{periodInfo.date}</span>
-              </div>
-              <span className="h-3.5 w-px bg-border/60" />
-              <div className="flex items-center gap-1.5">
-                <span className="uppercase tracking-[0.16em] opacity-60">Base</span>
-                <span className="font-mono font-semibold text-foreground/90">{periodLabel}</span>
-              </div>
-              <span className="h-3.5 w-px bg-border/60" />
-              <button
-                type="button"
-                onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-                aria-label={theme === "light" ? "Ativar tema escuro" : "Ativar tema claro"}
-                className="inline-grid h-7 w-7 place-items-center rounded-full border border-border/60 bg-background/40 text-muted-foreground transition hover:border-primary/50 hover:bg-primary/10 hover:text-primary"
-              >
-                {theme === "light" ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
-              </button>
-            </div>
-            <div className="hidden font-mono text-[11px] tabular-nums text-muted-foreground md:block">{now}</div>
-            <div className="grid h-9 w-9 place-items-center rounded-full border border-primary/35 bg-primary/10 text-[11px] font-bold text-primary shadow-[0_0_18px_-4px_rgba(0,180,255,0.4)]">
+          <div className="ml-auto flex items-center gap-3">
+            {!isReports && (
+              <>
+                <div className="hidden overflow-hidden rounded-full border border-border bg-surface-2/70 p-0.5 text-[11px] shadow-[inset_0_0_18px_rgba(0,180,255,0.06)] md:flex">
+                  {[
+                    { value: "d1", label: "D-1" },
+                    { value: "7d", label: "7 dias" },
+                    { value: "1m", label: "1 mês" },
+                  ].map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => setPeriod(p.value)}
+                      className={cn(
+                        "min-w-16 rounded-full px-3 py-1.5 font-semibold transition-all",
+                        period === p.value
+                          ? "bg-primary/25 text-primary shadow-[0_0_18px_rgba(0,180,255,0.25),inset_0_0_14px_rgba(0,180,255,0.12)]"
+                          : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+                      )}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="hidden items-center gap-3 rounded-full border border-border/60 bg-surface-2/55 px-3 py-1.5 text-[10px] text-muted-foreground shadow-[inset_0_0_16px_rgba(255,255,255,0.03)] xl:flex">
+                  <div className="flex items-center gap-1.5">
+                    <span className="uppercase tracking-[0.16em] opacity-70">Dados da base</span>
+                    <span className="font-mono font-semibold text-foreground/85">19/06/2026 (D-1)</span>
+                  </div>
+                  <span className="h-4 w-px bg-border/70" />
+                  <div className="flex items-center gap-1.5">
+                    <span className="uppercase tracking-[0.16em] opacity-70">Atualizado</span>
+                    <span className="font-mono font-semibold text-foreground/85">20/06/2026 06:05</span>
+                  </div>
+                </div>
+              </>
+            )}
+            <div className="hidden font-mono text-xs text-muted-foreground md:block">{now}</div>
+            <div className="grid h-8 w-8 place-items-center rounded-full border border-primary/40 bg-primary/10 text-[11px] font-bold text-primary">
               OP
             </div>
           </div>
