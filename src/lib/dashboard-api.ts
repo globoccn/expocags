@@ -37,7 +37,7 @@ export function useDashboardPeriod() {
   return [period, setPeriod] as const;
 }
 
-function apiBase() {
+export function apiBase() {
   const envBase = (import.meta as any).env?.VITE_API_URL;
   return (envBase || "https://ancar-n8n.gpfgqx.easypanel.host/webhook").replace(/\/$/, "");
 }
