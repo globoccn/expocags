@@ -368,10 +368,40 @@ function ReportsPage() {
         throw new Error("A geração terminou sem produzir o arquivo PDF.");
       }
 
-      await loadCagMetadata("daily");
+      const downloadUrl = new URL(CAG_REPORTS_API_URL);
+      downloadUrl.searchParams.set("type", "daily");
+      downloadUrl.searchParams.set("action", "download");
+
+      const downloadResponse = await fetch(downloadUrl.toString(), {
+        method: "GET",
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      const downloadText = await downloadResponse.text();
+      let downloadData: CagReportMetadata | null = null;
+
+      try {
+        downloadData = downloadText ? (JSON.parse(downloadText) as CagReportMetadata) : null;
+      } catch {
+        throw new Error(`O relatório foi gerado, mas a API não retornou o PDF em formato válido. Resposta: ${downloadText.slice(0, 140)}`);
+      }
+
+      if (!downloadResponse.ok || !downloadData || downloadData.success === false || downloadData.available === false) {
+        throw new Error(downloadData?.message || "O relatório foi gerado, mas não foi possível recuperar o PDF para download.");
+      }
+
+      const base64 = downloadData.report?.pdf?.base64;
+      if (!base64) {
+        throw new Error("O relatório foi gerado, mas a resposta de download veio sem o conteúdo do PDF.");
+      }
+
+      const filename = downloadData.report?.pdf?.filename || "relatorio-cag-diario.pdf";
+      const blob = base64ToBlob(base64, downloadData.report?.pdf?.mime_type || "application/pdf");
+      downloadBlob(blob, filename);
+      setCagMetadata(downloadData);
       setCagMessage({
         type: "success",
-        text: "Relatório diário gerado com sucesso. O arquivo já está disponível para download.",
+        text: "Relatório diário gerado com sucesso. Download iniciado automaticamente.",
       });
     } catch (error) {
       setCagMessage({
@@ -552,7 +582,7 @@ function ReportsPage() {
                           className="inline-flex items-center justify-center gap-2 rounded-md border border-primary/45 bg-primary/10 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {isGeneratingCag ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                          {isGeneratingCag ? "Gerando..." : "Gerar novamente"}
+                          {isGeneratingCag ? "Gerando e preparando download..." : "Gerar e baixar novamente"}
                         </button>
                       )}
                       <button
@@ -593,7 +623,7 @@ function ReportsPage() {
                       className="mt-4 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isGeneratingCag ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                      {isGeneratingCag ? "Gerando relatório..." : "Gerar relatório diário"}
+                      {isGeneratingCag ? "Gerando e preparando download..." : "Gerar relatório diário"}
                     </button>
                   )}
                 </div>
