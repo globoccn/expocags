@@ -11,6 +11,7 @@ import {
   FileText,
   Loader2,
   RefreshCw,
+  Sparkles,
 } from "lucide-react";
 
 export const Route = createFileRoute("/reports")({
@@ -105,21 +106,27 @@ const CAG_REPORT_PERIODS: Array<{
   },
 ];
 
-const DEFAULT_N8N_WEBHOOK_BASE_URL = "https://ancar-n8n.gpfgqx.easypanel.host/webhook";
+const DEFAULT_AUTOMATION_BASE_URL = "https://ancar-n8n.gpfgqx.easypanel.host/webhook";
 
 function joinUrl(base: string, path: string) {
   return `${base.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
 }
 
-const N8N_WEBHOOK_BASE_URL =
-  import.meta.env.VITE_N8N_WEBHOOK_BASE_URL || DEFAULT_N8N_WEBHOOK_BASE_URL;
+const AUTOMATION_BASE_URL =
+  import.meta.env.VITE_AUTOMATION_BASE_URL ||
+  import.meta.env.VITE_N8N_WEBHOOK_BASE_URL ||
+  DEFAULT_AUTOMATION_BASE_URL;
 
 const WATER_WEBHOOK_URL =
   import.meta.env.VITE_AGUA_DEMONSTRATIVO_URL ||
-  joinUrl(N8N_WEBHOOK_BASE_URL, "agua-ai/demonstrativo");
+  joinUrl(AUTOMATION_BASE_URL, "agua-ai/demonstrativo");
 
 const CAG_REPORTS_API_URL =
-  import.meta.env.VITE_CAG_REPORTS_URL || joinUrl(N8N_WEBHOOK_BASE_URL, "cag/reports");
+  import.meta.env.VITE_CAG_REPORTS_URL || joinUrl(AUTOMATION_BASE_URL, "cag/reports");
+
+const CAG_DAILY_GENERATE_URL =
+  import.meta.env.VITE_CAG_DAILY_GENERATE_URL ||
+  joinUrl(AUTOMATION_BASE_URL, "cag/reports/daily/generate");
 
 function moneyInputToNumber(value: string) {
   const normalized = String(value || "")
@@ -188,6 +195,7 @@ function ReportsPage() {
   const [cagMetadata, setCagMetadata] = useState<CagReportMetadata | null>(null);
   const [isLoadingCag, setIsLoadingCag] = useState(false);
   const [isDownloadingCag, setIsDownloadingCag] = useState(false);
+  const [isGeneratingCag, setIsGeneratingCag] = useState(false);
   const [cagMessage, setCagMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const [localId, setLocalId] = useState("pavilhao_azul");
@@ -321,6 +329,60 @@ function ReportsPage() {
     }
   }
 
+  async function handleGenerateCag() {
+    if (cagPeriod !== "daily") {
+      setCagMessage({
+        type: "error",
+        text: `A geração sob demanda do relatório ${selectedCagPeriod.shortLabel.toLowerCase()} será habilitada quando essa versão for publicada.`,
+      });
+      return;
+    }
+
+    setCagMessage(null);
+    setIsGeneratingCag(true);
+
+    try {
+      const response = await fetch(CAG_DAILY_GENERATE_URL, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ source: "frontend", report_type: "daily" }),
+      });
+
+      const text = await response.text();
+      let data: any = null;
+
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        throw new Error(`O serviço de geração não retornou uma resposta válida. Resposta: ${text.slice(0, 140)}`);
+      }
+
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.message || data?.error || "Não foi possível gerar o relatório diário.");
+      }
+
+      if (data?.pdf_generated === false) {
+        throw new Error("A geração terminou sem produzir o arquivo PDF.");
+      }
+
+      await loadCagMetadata("daily");
+      setCagMessage({
+        type: "success",
+        text: "Relatório diário gerado com sucesso. O arquivo já está disponível para download.",
+      });
+    } catch (error) {
+      setCagMessage({
+        type: "error",
+        text: error instanceof Error ? error.message : "Erro inesperado ao gerar relatório CAG.",
+      });
+    } finally {
+      setIsGeneratingCag(false);
+    }
+  }
+
   async function handleGenerateWater() {
     setMessage(null);
 
@@ -368,7 +430,7 @@ function ReportsPage() {
       } catch {
         const preview = responseText.trim().slice(0, 160);
         throw new Error(
-          `O endpoint não retornou JSON/PDF. Verifique a URL configurada: ${WATER_WEBHOOK_URL}. Resposta: ${preview}`,
+          `O serviço de geração não retornou JSON/PDF válido. Resposta: ${preview}`,
         );
       }
 
@@ -378,7 +440,7 @@ function ReportsPage() {
 
       const base64 = data?.pdf?.base64;
       if (!base64) {
-        throw new Error("O workflow respondeu sem o PDF em base64.");
+        throw new Error("O serviço respondeu sem o PDF em base64.");
       }
 
       const filename = data?.pdf?.filename || "demonstrativo-agua.pdf";
@@ -481,15 +543,28 @@ function ReportsPage() {
                         Período: <span className="font-semibold text-foreground">{reportPeriodLabel(cagMetadata?.report)}</span>
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleDownloadCag}
-                      disabled={isDownloadingCag}
-                      className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {isDownloadingCag ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-                      {isDownloadingCag ? "Baixando..." : "Baixar PDF"}
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      {cagPeriod === "daily" && (
+                        <button
+                          type="button"
+                          onClick={handleGenerateCag}
+                          disabled={isGeneratingCag || isDownloadingCag}
+                          className="inline-flex items-center justify-center gap-2 rounded-md border border-primary/45 bg-primary/10 px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {isGeneratingCag ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                          {isGeneratingCag ? "Gerando..." : "Gerar novamente"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={handleDownloadCag}
+                        disabled={isDownloadingCag || isGeneratingCag}
+                        className="inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isDownloadingCag ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                        {isDownloadingCag ? "Baixando..." : "Baixar PDF"}
+                      </button>
+                    </div>
                   </div>
 
                   {cagMetadata?.report?.summary && (
@@ -505,8 +580,22 @@ function ReportsPage() {
                   </div>
                   <h3 className="mt-3 font-display text-lg font-semibold">Ainda não publicado</h3>
                   <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
-                    {cagMetadata?.message || `O relatório ${selectedCagPeriod.shortLabel.toLowerCase()} ainda não foi gerado. A interface já está preparada para recebê-lo quando o workflow for ativado.`}
+                    {cagMetadata?.message ||
+                      (cagPeriod === "daily"
+                        ? "Ainda não existe um relatório diário publicado. Gere agora o relatório do último dia com dados consolidados."
+                        : `O relatório ${selectedCagPeriod.shortLabel.toLowerCase()} ainda não foi publicado.`)}
                   </p>
+                  {cagPeriod === "daily" && (
+                    <button
+                      type="button"
+                      onClick={handleGenerateCag}
+                      disabled={isGeneratingCag}
+                      className="mt-4 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {isGeneratingCag ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                      {isGeneratingCag ? "Gerando relatório..." : "Gerar relatório diário"}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -575,7 +664,7 @@ function ReportsPage() {
           </p>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
+        <div>
           <section className="glass-card p-5">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div>
@@ -657,18 +746,7 @@ function ReportsPage() {
             </div>
           </section>
 
-          <aside className="glass-card p-5">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Prévia do envio</div>
-            <h3 className="mt-2 font-display text-lg font-semibold">Contrato com o n8n</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Payload enviado ao workflow do demonstrativo de água.</p>
-            <div className="mt-4 rounded-lg border border-border/70 bg-black/20 p-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
-              <pre className="overflow-auto whitespace-pre-wrap">{JSON.stringify(payload, null, 2)}</pre>
-            </div>
-            <div className="mt-4 rounded-lg border border-border/70 bg-muted/20 p-3 text-xs text-muted-foreground">
-              <div className="font-semibold text-foreground">Endpoint configurado</div>
-              <div className="mt-1 break-all font-mono">{WATER_WEBHOOK_URL}</div>
-            </div>
-          </aside>
+
         </div>
       </div>
     </div>

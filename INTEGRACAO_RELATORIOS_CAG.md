@@ -1,22 +1,35 @@
-# Integração — Relatórios CAG
+# Relatórios CAG — integração frontend
 
-Base: stellar-command-center-ai-copilot-frontend-v2_3_sem_historico_refresh
+Base: `stellar-command-center-ai-copilot-frontend-v2_3_sem_historico_refresh`
 
-Alterações aplicadas apenas sobre esta base:
+## Alterações desta revisão
 
-- Item lateral `Relatórios Hidrômetros` renomeado para `Relatórios`.
-- `/reports` passa a ser um Centro de Relatórios.
-- Novo bloco `Relatório CAG` com Diário, Semanal e Mensal.
-- Diário consulta `GET /webhook/cag/reports?type=daily&action=metadata`.
-- Download do Diário usa `GET /webhook/cag/reports?type=daily&action=download`.
-- Semanal e Mensal já estão preparados na interface e aparecem como não publicados enquanto não houver relatório.
-- Demonstrativo de água foi preservado na mesma página e continua usando `agua-ai/demonstrativo`.
-- O cabeçalho em `/reports` não exibe o seletor global do dashboard para evitar conflito conceitual; a troca de tema continua disponível.
+- Área `/reports` mantém Relatório CAG + Demonstrativo de Consumo de Água.
+- Relatório Diário agora possui geração sob demanda pelo botão `Gerar relatório diário` / `Gerar novamente`.
+- Depois da geração, a tela atualiza automaticamente os metadados do relatório.
+- Download continua separado pelo botão `Baixar PDF`.
+- Semanal e Mensal permanecem preparados na interface, sem geração até publicação dos respectivos workflows.
+- Removido o bloco lateral de prévia técnica do Demonstrativo de Água.
+- Removidas menções visíveis à infraestrutura de automação.
 
-Variáveis opcionais:
+## Endpoints usados pelo frontend
 
-- `VITE_N8N_WEBHOOK_BASE_URL`
+### Consultar metadados
+`GET /webhook/cag/reports?type=daily&action=metadata`
+
+### Baixar relatório pronto
+`GET /webhook/cag/reports?type=daily&action=download`
+
+### Gerar / regenerar relatório diário
+`POST /webhook/cag/reports/daily/generate`
+
+O endpoint de geração é fornecido pelo workflow `Expo CAG AI - Relatório DIÁRIO FINAL V4.2 - Geração Frontend`.
+
+## Variáveis opcionais
+
 - `VITE_CAG_REPORTS_URL`
+- `VITE_CAG_DAILY_GENERATE_URL`
 - `VITE_AGUA_DEMONSTRATIVO_URL`
+- `VITE_AUTOMATION_BASE_URL`
 
-Fallback do n8n: `https://ancar-n8n.gpfgqx.easypanel.host/webhook`
+Por compatibilidade, `VITE_N8N_WEBHOOK_BASE_URL` continua aceito internamente caso já exista no deploy.

@@ -137,7 +137,7 @@ function extractAnswer(json: any): string {
   ];
   const found = candidates.find((value) => typeof value === "string" && value.trim());
   if (found) return cleanText(found);
-  return "Não consegui interpretar a resposta do Copilot. Verifique o retorno do workflow n8n.";
+  return "Não consegui interpretar a resposta do Copilot. Verifique o retorno do serviço de IA.";
 }
 
 function normalizeHistory(history: any[]): ChatMessage[] {
