@@ -1,131 +1,513 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Tooltip, XAxis, YAxis } from "recharts";
-import { AlertTriangle, Droplets, Radio } from "lucide-react";
-import { chillers, chillerTheme } from "@/data/mockCagData";
-import { StatusBadge } from "@/components/cag/badges";
-import { ChartWrap, chartColors, tooltipStyle } from "@/components/cag/chart-wrap";
+import {
+  AlertTriangle,
+  CalendarDays,
+  CheckCircle2,
+  ChevronDown,
+  Download,
+  Info,
+  Settings,
+  Wrench,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import pumpBlue from "@/assets/pump-blue.png";
+import pumpRed from "@/assets/pump-red.png";
+import pumpWhite from "@/assets/pump-white.png";
+import { type ChillerData, type ChillerId, type PumpData } from "@/data/mockCagData";
+import { labelForPeriod, legacyChillers, useDashboard } from "@/lib/dashboard-api";
+import { cn } from "@/lib/utils";
+import { EnterpriseLineChart } from "@/components/cag/enterprise-line-chart";
 
 export const Route = createFileRoute("/pumps")({
-  head: () => ({ meta: [{ title: "Bombas — CAG Intelligence AI" }] }),
+  head: () => ({ meta: [{ title: "Bombas — CAG Expo Center Norte" }] }),
   component: PumpsPage,
 });
 
-function PumpsPage() {
-  const pumpSeries = Array.from({ length: 24 }, (_, i) => ({
-    t: `${String(i).padStart(2, "0")}h`,
-    pressure: +(3.1 + Math.sin(i / 3) * 0.3).toFixed(2),
-    setpoint: 3.3,
-    bypass: +(25 + Math.sin(i / 4) * 10 + Math.random() * 5).toFixed(0),
+type PeriodKey = "d1" | "week" | "month";
+type PumpTrendContext = "pressure" | "pumps" | "bypass";
+
+const periodOptions: Array<{ key: PeriodKey; label: string; date: string }> = [
+  { key: "d1", label: "D-1", date: "19/06/2026" },
+  { key: "week", label: "Semana", date: "13/06 a 19/06" },
+  { key: "month", label: "Mês", date: "Junho/2026" },
+];
+
+const pumpImages: Record<ChillerId, string> = {
+  blue: pumpBlue,
+  red: pumpRed,
+  white: pumpWhite,
+};
+
+const groupLabels: Record<ChillerId, string> = {
+  blue: "Bombas Azul",
+  red: "Bombas Vermelho",
+  white: "Bombas Branco",
+};
+
+const groupColors: Record<ChillerId, { dot: string; text: string; border: string; glow: string; soft: string; accent: string }> = {
+  blue: {
+    dot: "bg-sky-400",
+    text: "text-sky-300",
+    border: "border-sky-400/45",
+    glow: "shadow-[0_0_32px_rgba(56,189,248,0.18)]",
+    soft: "from-sky-500/14 via-sky-400/4 to-transparent",
+    accent: "#38bdf8",
+  },
+  red: {
+    dot: "bg-rose-500",
+    text: "text-rose-300",
+    border: "border-rose-500/45",
+    glow: "shadow-[0_0_34px_rgba(244,63,94,0.18)]",
+    soft: "from-rose-500/16 via-rose-400/4 to-transparent",
+    accent: "#f43f5e",
+  },
+  white: {
+    dot: "bg-slate-100",
+    text: "text-slate-100",
+    border: "border-slate-300/35",
+    glow: "shadow-[0_0_32px_rgba(226,232,240,0.12)]",
+    soft: "from-slate-300/12 via-slate-300/4 to-transparent",
+    accent: "#e2e8f0",
+  },
+};
+
+const trendContexts: Record<
+  PumpTrendContext,
+  { label: string; subtitle: string; unit: string; lines: Array<{ key: string; label: string; color: string; dashed?: boolean }> }
+> = {
+  pressure: {
+    label: "Pressão",
+    subtitle: "Pressão da linha e setpoint",
+    unit: "bar",
+    lines: [
+      { key: "pressure", label: "Pressão linha", color: "#fb7185" },
+      { key: "setpoint", label: "Setpoint", color: "#94a3b8", dashed: true },
+    ],
+  },
+  pumps: {
+    label: "Bombas",
+    subtitle: "Estado operacional BAG1 a BAG4",
+    unit: "status",
+    lines: [
+      { key: "bag1", label: "BAG1", color: "#22c55e" },
+      { key: "bag2", label: "BAG2", color: "#38bdf8" },
+      { key: "bag3", label: "BAG3", color: "#facc15" },
+      { key: "bag4", label: "BAG4", color: "#a78bfa" },
+    ],
+  },
+  bypass: {
+    label: "Bypass",
+    subtitle: "Abertura da válvula bypass",
+    unit: "%",
+    lines: [{ key: "bypass", label: "Bypass", color: "#f97316" }],
+  },
+};
+
+function fmt(value: number | null | undefined, digits = 1) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return "--";
+  return Number(value).toLocaleString("pt-BR", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+}
+
+function periodPointCount(period: PeriodKey) {
+  if (period === "d1") return 24;
+  if (period === "week") return 7;
+  return 30;
+}
+
+function periodTickLabel(period: PeriodKey, index: number) {
+  if (period === "d1") return `${String(index).padStart(2, "0")}h`;
+  if (period === "week") return [`D-6`, `D-5`, `D-4`, `D-3`, `D-2`, `D-1`, `Hoje`][index] || `D-${6 - index}`;
+  return `${String(index + 1).padStart(2, "0")}/06`;
+}
+
+function trendPeriodLabel(period: PeriodKey) {
+  if (period === "d1") return "24 horas";
+  if (period === "week") return "7 dias";
+  return "30 dias";
+}
+
+function groupStatus(group: ChillerData) {
+  const pumpsOn = group.pumps.filter((pump) => pump.status === "on").length;
+  const attention = group.risk !== "ok";
+  return {
+    label: attention ? "Atenção" : "Normal",
+    tone: attention ? "warn" as const : "ok" as const,
+    occurrence: group.aiInsight || "Sem ocorrências relevantes",
+    description: attention ? "Grupo com ponto de atenção no período." : "Grupo hidráulico dentro dos parâmetros operacionais.",
+    pumpsOn,
+  };
+}
+
+function pumpStatusLabel(pump: PumpData) {
+  if (pump.status === "fault" || pump.alarm) return { label: "Alarme", tone: "alert" as const };
+  if (pump.status === "on") return { label: "Ligada", tone: "ok" as const };
+  return { label: "Desligada", tone: "muted" as const };
+}
+
+function pumpHours(pump: PumpData, _index: number) {
+  return (pump as any).hoursOn ?? null;
+}
+
+function pumpStarts(pump: PumpData, _index: number) {
+  return (pump as any).starts ?? null;
+}
+
+function buildPumpTrendData(group: ChillerData, _period: PeriodKey) {
+  const pressure = (group as any).pumpSeries?.pressao || [];
+  const pumps = (group as any).pumpSeries?.bombas || [];
+  const bypass = (group as any).pumpSeries?.bypass || [];
+  const total = Math.max(pressure.length, pumps.length, bypass.length);
+  return Array.from({ length: total }, (_, index) => ({
+    t: pressure[index]?.x || pumps[index]?.x || bypass[index]?.x || "--",
+    pressure: pressure[index]?.linha ?? null,
+    setpoint: pressure[index]?.setpoint ?? null,
+    bypass: bypass[index]?.abertura ?? null,
+    bag1: pumps[index]?.bag1 ?? null,
+    bag2: pumps[index]?.bag2 ?? null,
+    bag3: pumps[index]?.bag3 ?? null,
+    bag4: pumps[index]?.bag4 ?? null,
   }));
-  const alarmsPerPump = chillers.flatMap((c) =>
-    c.pumps.map((p) => ({
-      name: `${c.name.split(" ")[1][0]}-${p.name.split(" ")[1]}`,
-      alarms: p.alarm ? 1 : 0,
-      health: p.healthScore,
-    })),
+}
+
+function yAxisConfig(context: PumpTrendContext, group: ChillerData) {
+  if (context === "pressure") {
+    const min = Math.max(0, Math.floor((group.hydraulic.pressureLine - 0.8) * 10) / 10);
+    const max = Math.ceil((group.hydraulic.pressureSetpoint + 0.6) * 10) / 10;
+    const mid = Number(((min + max) / 2).toFixed(1));
+    return { domain: [min, max] as [number, number], ticks: [min, mid, max] };
+  }
+  if (context === "pumps") return { domain: [-0.1, 1.1] as [number, number], ticks: [0, 1] };
+  return { domain: [0, 100] as [number, number], ticks: [0, 25, 50, 75, 100] };
+}
+
+function statusPill(tone: "ok" | "warn" | "alert" | "muted", label: string) {
+  return cn(
+    "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-bold",
+    tone === "ok" && "border-status-ok/45 bg-status-ok/10 text-status-ok",
+    tone === "warn" && "border-status-warn/55 bg-status-warn/10 text-status-warn",
+    tone === "alert" && "border-status-alert/55 bg-status-alert/10 text-status-alert",
+    tone === "muted" && "border-border/70 bg-surface-2/60 text-muted-foreground",
   );
+}
+
+function getEvents(group: ChillerData) {
+  if (group.id === "red") {
+    return [
+      { time: "06:45", label: "BAG 3 partida remota", tone: "info" as const },
+      { time: "06:12", label: "BAG 2 parada por baixa pressão", tone: "warn" as const },
+      { time: "03:18", label: "Válvula bypass com abertura elevada", tone: "warn" as const },
+      { time: "02:30", label: "Pressão abaixo do setpoint", tone: "warn" as const },
+    ];
+  }
+
+  return [
+    { time: "13:55", label: "Grupo em operação remota", tone: "info" as const },
+    { time: "11:20", label: "Pressão estabilizada", tone: "info" as const },
+    { time: "07:00", label: "Dados do período consolidados", tone: "info" as const },
+  ];
+}
+
+function getRecommendations(group: ChillerData) {
+  if (group.id === "red") {
+    return [
+      { title: "Verificar pressão da linha", detail: "Pressão média abaixo do setpoint no período." },
+      { title: "Inspecionar válvula bypass", detail: "Abertura elevada pode indicar recirculação excessiva." },
+      { title: "Validar operação da BAG 2", detail: "Bomba com parada associada à baixa pressão." },
+    ];
+  }
+
+  return [];
+}
+
+function PumpCard({ pump, index }: { pump: PumpData; index: number }) {
+  const status = pumpStatusLabel(pump);
+  const hasAttention = status.tone !== "ok" || pump.mode === "local";
 
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="text-[11px] uppercase tracking-[0.25em] text-muted-foreground">Hidráulica</div>
-        <h1 className="font-display text-3xl font-bold">Bombas</h1>
-        <p className="text-sm text-muted-foreground">12 bombas distribuídas por 3 chillers</p>
+    <article className={cn("rounded-2xl border border-border/55 bg-surface-2/35 p-4", hasAttention && "border-status-warn/45 bg-status-warn/5")}> 
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-display text-lg font-bold">BAG {index + 1}</h3>
+          <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Bomba de água gelada</p>
+        </div>
+        <span className={statusPill(status.tone, status.label)}>
+          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+          {status.label}
+        </span>
       </div>
 
-      {chillers.map((c) => {
-        const theme = chillerTheme[c.id];
-        return (
-          <section key={c.id} className={`glass-card ${theme.ring} p-5`}>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-display text-lg font-semibold" style={{ color: theme.hex }}>
-                Bombas do {c.name}
-              </h2>
-              <span className="text-xs text-muted-foreground">
-                {c.pumps.filter((p) => p.status === "on").length}/4 ligadas
+      <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Modo</p>
+          <p className={cn("mt-1 font-bold", pump.mode === "local" ? "text-status-warn" : "text-foreground")}>{pump.mode === "local" ? "Local" : "Remoto"}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Status</p>
+          <p className={cn("mt-1 font-bold", pump.status === "on" ? "text-status-ok" : "text-muted-foreground")}>{pump.status === "on" ? "Operou no período" : "Sem operação no período"}</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Horas ligada</p>
+          <p className="mt-1 font-mono text-base font-bold">{fmt(pumpHours(pump, index), 1)} h</p>
+        </div>
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Partidas est.</p>
+          <p className="mt-1 font-mono text-base font-bold">{fmt(pumpStarts(pump, index), 0)}</p>
+        </div>
+      </div>
+
+      <div className="mt-5 border-t border-border/50 pt-3">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Última ocorrência</p>
+        <div className={cn("mt-2 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold", hasAttention ? "border-status-warn/45 bg-status-warn/10 text-status-warn" : "border-status-ok/35 bg-status-ok/10 text-status-ok")}>
+          {hasAttention ? <AlertTriangle className="h-3 w-3" /> : <CheckCircle2 className="h-3 w-3" />}
+          {pump.lastEvent || "Sem ocorrências relevantes"}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function PumpsPage() {
+  const [activeId, setActiveId] = useState<ChillerId>("blue");
+  const { period, setPeriod, payload } = useDashboard();
+  const [trendContext, setTrendContext] = useState<PumpTrendContext>("pressure");
+  const chillers = legacyChillers(payload).map((group: any) => {
+    const apiId = group.id === "blue" ? "azul" : group.id === "red" ? "vermelho" : "branco";
+    const bomba = payload?.bombas?.items?.find?.((b: any) => b.id === apiId);
+    return { ...group, pumpSeries: bomba?.trends || {} };
+  }) as ChillerData[];
+  const active = chillers.find((group) => group.id === activeId) || chillers[0];
+  const status = groupStatus(active);
+  const color = groupColors[active.id];
+  const selectedPeriod = labelForPeriod(payload, period);
+  const trendData = useMemo(() => buildPumpTrendData(active, period), [active, period]);
+  const activeTrend = trendContexts[trendContext];
+  const activeYAxis = yAxisConfig(trendContext, active);
+  const events = getEvents(active);
+  const recommendations = getRecommendations(active);
+
+  return (
+    <div className="space-y-4">
+      <section className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div>
+          <h1 className="font-display text-3xl font-bold tracking-tight">Bombas</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Resumo operacional dos grupos de bombeamento de água gelada</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-surface-2/55 px-3 py-2 text-xs text-muted-foreground">
+            <span className="grid h-8 w-8 place-items-center rounded-lg border border-primary/25 bg-primary/10 text-primary">
+              <CalendarDays className="h-4 w-4" />
+            </span>
+            <span>
+              <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Dados consolidados</span>
+              <span className="font-semibold text-foreground">Diariamente às 07:00</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-2 rounded-xl border border-border/60 bg-surface-2/55 px-3 py-2 text-xs">
+            <span className="text-muted-foreground">Período analisado</span>
+            <select
+              value={period}
+              onChange={(event) => setPeriod(event.target.value as PeriodKey)}
+              className="rounded-lg border border-border/50 bg-background/65 px-3 py-1.5 font-semibold text-foreground outline-none"
+            >
+              {periodOptions.map((option) => (
+                <option key={option.key} value={option.key}>{option.label} · {option.date}</option>
+              ))}
+            </select>
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <button className="inline-flex items-center gap-2 rounded-xl border border-status-ai/45 bg-status-ai/10 px-4 py-2 text-sm font-semibold text-status-ai transition hover:bg-status-ai/15">
+            <Download className="h-4 w-4" />
+            Exportar relatório
+          </button>
+        </div>
+      </section>
+
+      <section className="glass-card p-2">
+        <div className="grid gap-3 md:grid-cols-3">
+          {chillers.map((group) => {
+            const tabColor = groupColors[group.id];
+            const activeTab = activeId === group.id;
+            const tabStatus = groupStatus(group);
+            return (
+              <button
+                key={group.id}
+                onClick={() => setActiveId(group.id)}
+                className={cn(
+                  "flex items-center justify-center gap-3 rounded-xl border px-5 py-4 text-sm font-bold text-muted-foreground transition",
+                  activeTab ? `${tabColor.border} bg-surface-3/70 ${tabColor.text} ${tabColor.glow}` : "border-border/55 bg-surface-2/35 hover:border-primary/25 hover:text-foreground",
+                )}
+              >
+                <span className={cn("h-3 w-3 rounded-full shadow-[0_0_16px_currentColor]", tabColor.dot)} />
+                {groupLabels[group.id]}
+                <span className={cn("rounded-full border px-2 py-0.5 text-[10px]", tabStatus.tone === "ok" ? "border-status-ok/35 text-status-ok" : "border-status-warn/45 text-status-warn")}>{tabStatus.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className={cn("glass-card relative overflow-hidden border p-6", color.border, color.glow)}>
+        <div className={cn("absolute inset-0 pointer-events-none bg-gradient-to-br opacity-80", color.soft)} />
+        <div className="relative grid gap-6 xl:grid-cols-[1.15fr_1.85fr]">
+          <div className="flex items-center gap-6">
+            <div className="grid min-h-[178px] w-[285px] place-items-center rounded-2xl bg-background/25 shadow-inner">
+              <img src={pumpImages[active.id]} alt={groupLabels[active.id]} className="h-[170px] w-[260px] object-contain drop-shadow-[0_0_24px_rgba(56,189,248,0.18)]" />
+            </div>
+            <div className="min-w-[230px] flex-1">
+              <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Resumo do grupo</div>
+              <div className="mt-1 flex flex-wrap items-center gap-3">
+                <h2 className={cn("font-display text-2xl font-bold", color.text)}>{groupLabels[active.id]}</h2>
+                <span className={statusPill(status.tone, status.label)}>
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                  {status.label}
+                </span>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">{status.description}</p>
+              <div className="mt-5 rounded-xl border border-border/45 bg-background/35 p-4">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Principal ocorrência</p>
+                <p className={cn("mt-2 flex items-center gap-2 text-sm font-bold", status.tone === "ok" ? "text-status-ok" : "text-status-warn")}>
+                  {status.tone === "ok" ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+                  {status.occurrence}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-5">
+            {[
+              { label: "Pressão média", value: `${fmt(active.hydraulic.pressureLine, 2)} bar`, detail: (active.hydraulic.pressureError ?? 0) < 0 ? `${fmt(active.hydraulic.pressureError, 2)} bar` : "Dentro da faixa", alert: (active.hydraulic.pressureError ?? 0) < -0.3 },
+              { label: "Setpoint", value: `${fmt(active.hydraulic.pressureSetpoint, 2)} bar`, detail: "Pressão alvo", alert: false },
+              { label: "Desvio", value: `${fmt(active.hydraulic.pressureError, 2)} bar`, detail: (active.hydraulic.pressureError ?? 0) < -0.3 ? "Abaixo do setpoint" : "Estável", alert: (active.hydraulic.pressureError ?? 0) < -0.3 },
+              { label: "Válvula bypass", value: `${fmt(active.hydraulic.bypassValve, 0)}%`, detail: (active.hydraulic.bypassValve ?? 0) > 50 ? "Abertura elevada" : "Normal", alert: (active.hydraulic.bypassValve ?? 0) > 50 },
+              { label: "Bombas que operaram", value: `${status.pumpsOn ?? "--"} / 4`, detail: (status.pumpsOn ?? 0) >= 3 ? "Operou no período" : "Atenção", alert: (status.pumpsOn ?? 0) < 3 },
+            ].map((metric) => (
+              <div key={metric.label} className="rounded-2xl border border-border/45 bg-background/35 p-4">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">{metric.label}</p>
+                <p className={cn("mt-3 font-display text-2xl font-bold", metric.alert && "text-status-alert")}>{metric.value}</p>
+                <p className={cn("mt-2 text-xs", metric.alert ? "text-status-warn" : "text-muted-foreground")}>{metric.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="glass-card p-5">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold uppercase tracking-wide">Status das bombas do grupo</h2>
+          <span className="text-xs text-muted-foreground">BAG1 a BAG4 · {selectedPeriod.label}</span>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {active.pumps.map((pump, index) => (
+            <PumpCard key={pump.id} pump={pump} index={index} />
+          ))}
+        </div>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[1.35fr_0.8fr_0.85fr]">
+        <div className="glass-card p-5">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-lg font-bold uppercase tracking-wide">Tendências operacionais</h2>
+              <p className="mt-1 text-sm text-muted-foreground">{activeTrend.subtitle} · {trendPeriodLabel(period)}</p>
+            </div>
+            <div className="rounded-2xl border border-border/50 bg-background/35 p-1">
+              {(Object.keys(trendContexts) as PumpTrendContext[]).map((contextKey) => (
+                <button
+                  key={contextKey}
+                  onClick={() => setTrendContext(contextKey)}
+                  className={cn(
+                    "rounded-xl px-4 py-2 text-xs font-bold transition",
+                    trendContext === contextKey ? "bg-primary/20 text-primary shadow-[0_0_18px_rgba(14,165,233,0.15)]" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {trendContexts[contextKey].label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+            {activeTrend.lines.map((line) => (
+              <span key={line.key} className="inline-flex items-center gap-2">
+                <span className={cn("h-0.5 w-6", line.dashed && "border-t border-dashed bg-transparent")} style={{ backgroundColor: line.dashed ? "transparent" : line.color, borderColor: line.color }} />
+                {line.label}{activeTrend.unit !== "status" ? ` (${activeTrend.unit})` : ""}
               </span>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              {c.pumps.map((p) => {
-                const critical = p.alarm || p.mode === "local" || p.pressureError < -0.3 || p.bypassValve > 50;
-                return (
-                  <div key={p.id} className={`glass-card relative p-4 ${critical ? "ring-1 ring-status-alert/50" : ""}`}>
-                    {critical && (
-                      <div className="absolute right-2 top-2">
-                        <AlertTriangle className="h-4 w-4 text-status-alert animate-pulse-glow" />
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Droplets className="h-4 w-4" style={{ color: theme.hex }} />
-                      <span className="font-display text-sm font-semibold">{p.name}</span>
-                    </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <StatusBadge status={p.status} />
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] ${
-                          p.mode === "local" ? "border-status-alert/50 text-status-alert" : "border-border text-muted-foreground"
-                        }`}
-                      >
-                        <Radio className="h-2.5 w-2.5" /> {p.mode.toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-1.5 text-[11px]">
-                      <div><span className="text-muted-foreground">P. Linha:</span> <span className="font-mono font-semibold">{p.pressureLine.toFixed(2)}</span></div>
-                      <div><span className="text-muted-foreground">Setpoint:</span> <span className="font-mono font-semibold">{p.pressureSetpoint.toFixed(2)}</span></div>
-                      <div><span className="text-muted-foreground">Erro P.:</span> <span className={`font-mono font-semibold ${p.pressureError < -0.3 ? "text-status-alert" : ""}`}>{p.pressureError.toFixed(2)}</span></div>
-                      <div><span className="text-muted-foreground">Bypass:</span> <span className={`font-mono font-semibold ${p.bypassValve > 50 ? "text-status-alert" : ""}`}>{p.bypassValve}%</span></div>
-                      <div><span className="text-muted-foreground">Health:</span> <span className="font-mono font-semibold">{p.healthScore}/100</span></div>
-                      <div><span className="text-muted-foreground">Alarme:</span> <span className={`font-semibold ${p.alarm ? "text-status-alert" : "text-status-ok"}`}>{p.alarm ? "Ativo" : "Não"}</span></div>
-                    </div>
-                    <div className="mt-2 text-[10px] text-muted-foreground">Última: {p.lastEvent}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
-        );
-      })}
+            ))}
+          </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <ChartWrap title="Pressão Linha × Setpoint" subtitle="bar">
-          <LineChart data={pumpSeries}>
-            <CartesianGrid stroke={chartColors.grid} strokeDasharray="3 3" />
-            <XAxis dataKey="t" stroke={chartColors.muted} fontSize={11} />
-            <YAxis stroke={chartColors.muted} fontSize={11} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Line type="monotone" dataKey="pressure" stroke={chartColors.primary} strokeWidth={2} dot={false} name="Pressão" />
-            <Line type="monotone" dataKey="setpoint" stroke={chartColors.warn} strokeDasharray="4 4" strokeWidth={1.5} dot={false} name="Setpoint" />
-          </LineChart>
-        </ChartWrap>
-        <ChartWrap title="Abertura Bypass" subtitle="%">
-          <LineChart data={pumpSeries}>
-            <CartesianGrid stroke={chartColors.grid} strokeDasharray="3 3" />
-            <XAxis dataKey="t" stroke={chartColors.muted} fontSize={11} />
-            <YAxis stroke={chartColors.muted} fontSize={11} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Line type="monotone" dataKey="bypass" stroke={chartColors.alert} strokeWidth={2} dot={false} />
-          </LineChart>
-        </ChartWrap>
-        <ChartWrap title="Health Score das Bombas" subtitle="por bomba">
-          <BarChart data={alarmsPerPump}>
-            <CartesianGrid stroke={chartColors.grid} strokeDasharray="3 3" />
-            <XAxis dataKey="name" stroke={chartColors.muted} fontSize={11} />
-            <YAxis stroke={chartColors.muted} fontSize={11} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Bar dataKey="health" fill={chartColors.primary} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ChartWrap>
-        <ChartWrap title="Alarmes por Bomba" subtitle="ativos">
-          <BarChart data={alarmsPerPump}>
-            <CartesianGrid stroke={chartColors.grid} strokeDasharray="3 3" />
-            <XAxis dataKey="name" stroke={chartColors.muted} fontSize={11} />
-            <YAxis stroke={chartColors.muted} fontSize={11} />
-            <Tooltip contentStyle={tooltipStyle} />
-            <Bar dataKey="alarms" fill={chartColors.crit} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ChartWrap>
-      </div>
+          <EnterpriseLineChart
+            data={trendData}
+            xKey="t"
+            height={275}
+            leftDomain={activeYAxis.domain}
+            leftTicks={activeYAxis.ticks}
+            leftUnit={trendContext === "pumps" ? "" : activeTrend.unit === "%" ? "%" : ""}
+            showLegend={false}
+            className="border-border/35 bg-background/20"
+            series={activeTrend.lines.map((line, index) => ({
+              key: line.key,
+              label: line.label,
+              unit: trendContext === "pumps" ? "" : activeTrend.unit,
+              axis: "left" as const,
+              color: line.color,
+              dashed: line.dashed,
+              fill: index === 0 && !line.dashed,
+              valueFormatter: trendContext === "pumps" ? (value: number) => (Number(value) === 1 ? "Ligado" : "Desligado") : undefined,
+            }))}
+          />
+        </div>
+
+        <div className="glass-card p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold uppercase tracking-wide">Eventos recentes</h2>
+            <button className="text-xs font-bold text-status-ai hover:underline">Ver todos</button>
+          </div>
+          <div className="space-y-3">
+            {events.map((event) => (
+              <div key={`${event.time}-${event.label}`} className="flex items-center gap-3 rounded-2xl border border-border/35 bg-background/25 p-3">
+                <span className={cn("grid h-8 w-8 place-items-center rounded-full border", event.tone === "warn" ? "border-status-warn/40 bg-status-warn/10 text-status-warn" : "border-primary/35 bg-primary/10 text-primary")}>
+                  {event.tone === "warn" ? <AlertTriangle className="h-4 w-4" /> : <Info className="h-4 w-4" />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-mono text-xs font-bold text-foreground">{event.time}</p>
+                  <p className="truncate text-sm text-muted-foreground">{event.label}</p>
+                </div>
+                <span className={cn("rounded-full border px-2 py-0.5 text-[10px]", event.tone === "warn" ? "border-status-warn/40 text-status-warn" : "border-primary/35 text-primary")}>{event.tone === "warn" ? "Atenção" : "Informação"}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="glass-card p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-display text-lg font-bold uppercase tracking-wide">Pontos de atenção</h2>
+            <Wrench className="h-4 w-4 text-status-alert" />
+          </div>
+          {recommendations.length ? (
+            <div className="space-y-4">
+              {recommendations.map((recommendation, index) => (
+                <div key={recommendation.title} className="flex gap-4">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-status-warn/40 bg-status-warn/10 font-display text-lg font-bold text-status-warn">{index + 1}</span>
+                  <div>
+                    <p className="font-bold text-foreground">{recommendation.title}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{recommendation.detail}</p>
+                  </div>
+                </div>
+              ))}
+              <button className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-status-alert/45 bg-status-alert/10 px-4 py-2.5 text-sm font-bold text-status-alert transition hover:bg-status-alert/15">
+                Ver todas as recomendações
+                <Settings className="h-4 w-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex min-h-[220px] flex-col items-center justify-center text-center">
+              <CheckCircle2 className="h-9 w-9 text-status-ok" />
+              <p className="mt-4 font-display text-lg font-bold">Nenhuma ação crítica no momento</p>
+              <p className="mt-2 max-w-[260px] text-sm text-muted-foreground">Continue monitorando pressão, bypass e operação remota das bombas.</p>
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }
