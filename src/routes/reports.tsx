@@ -124,9 +124,17 @@ const WATER_WEBHOOK_URL =
 const CAG_REPORTS_API_URL =
   import.meta.env.VITE_CAG_REPORTS_URL || joinUrl(AUTOMATION_BASE_URL, "cag/reports");
 
-const CAG_DAILY_GENERATE_URL =
-  import.meta.env.VITE_CAG_DAILY_GENERATE_URL ||
-  joinUrl(AUTOMATION_BASE_URL, "cag/reports/daily/generate");
+const CAG_GENERATE_URLS: Record<CagReportPeriod, string> = {
+  daily:
+    import.meta.env.VITE_CAG_DAILY_GENERATE_URL ||
+    joinUrl(AUTOMATION_BASE_URL, "cag/reports/daily/generate"),
+  weekly:
+    import.meta.env.VITE_CAG_WEEKLY_GENERATE_URL ||
+    joinUrl(AUTOMATION_BASE_URL, "cag/reports/weekly/generate"),
+  monthly:
+    import.meta.env.VITE_CAG_MONTHLY_GENERATE_URL ||
+    joinUrl(AUTOMATION_BASE_URL, "cag/reports/monthly/generate"),
+};
 
 function moneyInputToNumber(value: string) {
   const normalized = String(value || "")
@@ -330,25 +338,17 @@ function ReportsPage() {
   }
 
   async function handleGenerateCag() {
-    if (cagPeriod !== "daily") {
-      setCagMessage({
-        type: "error",
-        text: `A geração sob demanda do relatório ${selectedCagPeriod.shortLabel.toLowerCase()} será habilitada quando essa versão for publicada.`,
-      });
-      return;
-    }
-
     setCagMessage(null);
     setIsGeneratingCag(true);
 
     try {
-      const response = await fetch(CAG_DAILY_GENERATE_URL, {
+      const response = await fetch(CAG_GENERATE_URLS[cagPeriod], {
         method: "POST",
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ source: "frontend", report_type: "daily" }),
+        body: JSON.stringify({ source: "frontend", report_type: cagPeriod }),
       });
 
       const text = await response.text();
@@ -369,7 +369,7 @@ function ReportsPage() {
       }
 
       const downloadUrl = new URL(CAG_REPORTS_API_URL);
-      downloadUrl.searchParams.set("type", "daily");
+      downloadUrl.searchParams.set("type", cagPeriod);
       downloadUrl.searchParams.set("action", "download");
 
       const downloadResponse = await fetch(downloadUrl.toString(), {
@@ -395,13 +395,13 @@ function ReportsPage() {
         throw new Error("O relatório foi gerado, mas a resposta de download veio sem o conteúdo do PDF.");
       }
 
-      const filename = downloadData.report?.pdf?.filename || "relatorio-cag-diario.pdf";
+      const filename = downloadData.report?.pdf?.filename || `relatorio-cag-${cagPeriod}.pdf`;
       const blob = base64ToBlob(base64, downloadData.report?.pdf?.mime_type || "application/pdf");
       downloadBlob(blob, filename);
       setCagMetadata(downloadData);
       setCagMessage({
         type: "success",
-        text: "Relatório diário gerado com sucesso. Download iniciado automaticamente.",
+        text: `Relatório ${selectedCagPeriod.shortLabel.toLowerCase()} gerado com sucesso. Download iniciado automaticamente.`,
       });
     } catch (error) {
       setCagMessage({
@@ -574,8 +574,7 @@ function ReportsPage() {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {cagPeriod === "daily" && (
-                        <button
+                      <button
                           type="button"
                           onClick={handleGenerateCag}
                           disabled={isGeneratingCag || isDownloadingCag}
@@ -583,8 +582,7 @@ function ReportsPage() {
                         >
                           {isGeneratingCag ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                           {isGeneratingCag ? "Gerando e preparando download..." : "Gerar e baixar novamente"}
-                        </button>
-                      )}
+                      </button>
                       <button
                         type="button"
                         onClick={handleDownloadCag}
@@ -611,21 +609,17 @@ function ReportsPage() {
                   <h3 className="mt-3 font-display text-lg font-semibold">Ainda não publicado</h3>
                   <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
                     {cagMetadata?.message ||
-                      (cagPeriod === "daily"
-                        ? "Ainda não existe um relatório diário publicado. Gere agora o relatório do último dia com dados consolidados."
-                        : `O relatório ${selectedCagPeriod.shortLabel.toLowerCase()} ainda não foi publicado.`)}
+                      `Ainda não existe um relatório ${selectedCagPeriod.shortLabel.toLowerCase()} publicado. Você pode gerá-lo agora.`}
                   </p>
-                  {cagPeriod === "daily" && (
-                    <button
+                  <button
                       type="button"
                       onClick={handleGenerateCag}
                       disabled={isGeneratingCag}
                       className="mt-4 inline-flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isGeneratingCag ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                      {isGeneratingCag ? "Gerando e preparando download..." : "Gerar relatório diário"}
+                      {isGeneratingCag ? "Gerando e preparando download..." : `Gerar relatório ${selectedCagPeriod.shortLabel.toLowerCase()}`}
                     </button>
-                  )}
                 </div>
               )}
             </div>
